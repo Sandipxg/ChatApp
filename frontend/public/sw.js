@@ -1,4 +1,4 @@
-const CACHE_NAME = 'journal-cache-v10' // Incremented to v10 to support route-selective offline fallbacks
+const CACHE_NAME = 'journal-cache-v11'
 
 const ASSETS_TO_CACHE = [
   '/',
