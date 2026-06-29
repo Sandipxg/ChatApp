@@ -286,13 +286,13 @@ export default function ChatPage() {
     <div className="flex h-full w-full bg-white dark:bg-gray-950 overflow-hidden font-sans">
       
       {/* ── 1. SIDEBAR COLUMN: CHATS & FILTER LIST ── */}
-      <div className={`w-full md:w-[320px] flex-shrink-0 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-150 dark:border-gray-800 transition-all h-full ${
+      <div className={`w-full md:w-[320px] flex-shrink-0 flex flex-col bg-bg-sidebar border-r border-border-app transition-all h-full ${
         selectedPartner ? 'hidden md:flex' : 'flex'
       }`}>
         
         {/* Chats title row + search */}
         <div className="px-4 pt-5 pb-3 space-y-3 select-none">
-          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">Messages</h2>
+          <h2 className="text-2xl font-extrabold text-text-title tracking-tight">Messages</h2>
           <div className="relative">
             <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
@@ -302,7 +302,7 @@ export default function ChatPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/50 rounded-full text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 focus:bg-white dark:focus:bg-gray-800 transition-all select-text"
+              className="w-full pl-10 pr-4 py-3 bg-bg-app border border-border-app rounded-full text-sm text-text-body placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 focus:bg-bg-card transition-all select-text"
             />
           </div>
         </div>
@@ -364,7 +364,7 @@ export default function ChatPage() {
                   >
                     <div className="relative flex-shrink-0">
                       {partner.image ? (
-                        <img src={partner.image} alt={partner.username} className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-900 shadow-sm" />
+                        <img src={partner.image} alt={partner.username} className="w-12 h-12 rounded-full object-cover border-2 border-border-app shadow-sm" />
                       ) : (
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base shadow-sm ${getAvatarBg(partner.id)}`}>
                           {partner.isGroup ? '👥' : getInitials(partner.username)}
@@ -374,7 +374,7 @@ export default function ChatPage() {
 
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center justify-between">
-                        <span className={`text-sm font-bold truncate max-w-[150px] ${isSelected ? 'text-accent' : 'text-gray-900 dark:text-white'}`}>{partner.username}</span>
+                        <span className={`text-sm font-bold truncate max-w-[150px] ${isSelected ? 'text-accent' : 'text-text-title'}`}>{partner.username}</span>
                         {partner.latestMessage && (
                           <span className="text-[11px] text-gray-400 font-medium select-none flex-shrink-0 ml-1">
                             {partner.latestMessage.createdAt.includes('T') ? formatTime(partner.latestMessage.createdAt) : partner.latestMessage.createdAt}
@@ -419,7 +419,7 @@ export default function ChatPage() {
                   >
                     <div className="relative flex-shrink-0">
                       {contact.image ? (
-                        <img src={contact.image} alt={contact.username} className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-900 shadow-sm" />
+                        <img src={contact.image} alt={contact.username} className="w-12 h-12 rounded-full object-cover border-2 border-border-app shadow-sm" />
                       ) : (
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base ${getAvatarBg(contact.id)}`}>
                           {getInitials(contact.username)}
@@ -427,7 +427,7 @@ export default function ChatPage() {
                       )}
                     </div>
                     <div className="text-left flex-1 min-w-0">
-                      <span className={`text-sm font-bold truncate block ${isSelected ? 'text-accent' : 'text-gray-900 dark:text-white'}`}>{contact.username}</span>
+                      <span className={`text-sm font-bold truncate block ${isSelected ? 'text-accent' : 'text-text-title'}`}>{contact.username}</span>
                       <span className="text-xs text-gray-400 dark:text-gray-500 truncate block mt-0.5">{contact.email}</span>
                     </div>
                   </div>
@@ -439,7 +439,7 @@ export default function ChatPage() {
       </div>
 
       {/* ── 2. CENTRAL / RIGHT COLUMN: CHAT WINDOW PANE ── */}
-      <div className={`flex-1 flex flex-col h-full bg-slate-50 dark:bg-[#0b0f17] overflow-hidden ${
+      <div className={`flex-1 flex flex-col h-full bg-bg-app overflow-hidden ${
         selectedPartner ? 'flex' : 'hidden md:flex'
       }`}>
         
@@ -447,12 +447,12 @@ export default function ChatPage() {
           // ACTIVE CONVERSATION WINDOW
           <>
             {/* Chat Window Header — glassmorphic */}
-            <div className="h-[72px] px-6 glass border-b border-gray-200/50 dark:border-gray-800/60 flex items-center flex-shrink-0 select-none z-10">
+            <div className="h-[72px] px-6 glass border-b border-border-app flex items-center flex-shrink-0 select-none z-10">
               <div className="flex items-center gap-4 w-full">
                 {/* Back link on Mobile */}
                 <button
                   onClick={() => setSelectedPartner(null)}
-                  className="md:hidden mr-1 p-2 rounded-2xl text-gray-400 hover:text-gray-800 hover:bg-gray-100/80 transition-colors cursor-pointer"
+                  className="md:hidden mr-1 p-2 rounded-2xl text-gray-400 hover:text-text-title hover:bg-bg-sidebar transition-colors cursor-pointer"
                   title="Back to Conversations"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -463,7 +463,7 @@ export default function ChatPage() {
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
                   {selectedPartner.image ? (
-                    <img src={selectedPartner.image} alt={selectedPartner.username} className="w-11 h-11 rounded-full object-cover ring-2 ring-white dark:ring-gray-900" />
+                    <img src={selectedPartner.image} alt={selectedPartner.username} className="w-11 h-11 rounded-full object-cover ring-2 ring-border-app" />
                   ) : (
                     <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-base ${getAvatarBg(selectedPartner.id)}`}>
                       {selectedPartner.isGroup ? '👥' : getInitials(selectedPartner.username)}
@@ -472,8 +472,8 @@ export default function ChatPage() {
                 </div>
 
                 <div className="text-left leading-tight flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{selectedPartner.username}</h3>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{selectedPartner.email}</p>
+                  <h3 className="text-base font-bold text-text-title truncate">{selectedPartner.username}</h3>
+                  <p className="text-xs text-text-body opacity-60 truncate mt-0.5">{selectedPartner.email}</p>
                 </div>
               </div>
             </div>
@@ -515,7 +515,7 @@ export default function ChatPage() {
                       <div className={`max-w-[70%] rounded-3xl px-5 py-3 leading-relaxed text-sm ${
                         isOwnMessage
                           ? 'bg-gradient-to-br from-accent to-indigo-600 text-white rounded-br-sm bubble-own'
-                          : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-bl-sm border border-gray-200/50 dark:border-gray-700/40 shadow-sm'
+                          : 'bg-bg-card text-text-body rounded-bl-sm border border-border-app shadow-sm'
                       }`}>
                         <p className="text-left break-words whitespace-pre-wrap select-text">
                           {msg.text}
@@ -541,7 +541,7 @@ export default function ChatPage() {
             </div>
 
             {/* MESSAGE INPUT CONTAINER — floating pill */}
-            <div className="px-4 py-4 md:px-6 bg-white/90 dark:bg-gray-900/95 border-t border-gray-200/50 dark:border-gray-800/70 flex-shrink-0 select-none z-10 backdrop-blur-sm">
+            <div className="px-4 py-4 md:px-6 bg-bg-card/90 border-t border-border-app flex-shrink-0 select-none z-10 backdrop-blur-sm">
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend() }}
                 className="flex items-center gap-3"
@@ -553,7 +553,7 @@ export default function ChatPage() {
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Type a message..."
-                  className="flex-1 bg-gray-50 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700/60 focus:border-accent/50 focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-accent/20 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-full px-6 py-3.5 transition-all select-text"
+                  className="flex-1 bg-bg-app border border-border-app focus:bg-bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 text-sm text-text-title placeholder-gray-400 dark:placeholder-gray-500 rounded-full px-6 py-3.5 transition-all select-text"
                 />
 
                 {/* Send Button — accent glow */}
@@ -576,7 +576,7 @@ export default function ChatPage() {
           </>
         ) : (
           // EMPTY CHAT HOMEPAGE VIEW
-          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 dark:bg-[#0d1117] select-none">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-bg-app select-none">
             
             {/* Animated logo icon */}
             <div className="relative mb-8">
@@ -590,7 +590,7 @@ export default function ChatPage() {
               <div className="absolute -bottom-1 -left-2 w-3 h-3 bg-pink-400 rounded-full opacity-70 animate-bounce" style={{animationDelay: '0.4s'}}></div>
             </div>
 
-            <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tight">
+            <h3 className="text-2xl font-extrabold text-text-title mb-3 tracking-tight">
               Welcome to <span className="bg-gradient-to-r from-accent to-indigo-500 bg-clip-text text-transparent">ChatApp</span>
             </h3>
             

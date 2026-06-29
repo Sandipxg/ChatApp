@@ -23,7 +23,9 @@ const ThemeContext = createContext({
   readReceipts: true,
   setReadReceipts: () => {},
   playSounds: true,
-  setPlaySounds: () => {}
+  setPlaySounds: () => {},
+  presetTheme: "default",
+  setPresetTheme: () => {}
 })
 
 export function ThemeProvider({ children }) {
@@ -34,6 +36,7 @@ export function ThemeProvider({ children }) {
   const [enterToSend, setEnterToSend] = useState(() => localStorage.getItem("enterToSend") === "true")
   const [readReceipts, setReadReceipts] = useState(() => localStorage.getItem("readReceipts") !== "false")
   const [playSounds, setPlaySounds] = useState(() => localStorage.getItem("playSounds") !== "false")
+  const [presetTheme, setPresetTheme] = useState(() => localStorage.getItem("presetTheme") || "default")
 
   // Update theme setting in localStorage and classList
   function handleSetTheme(value) {
@@ -48,6 +51,18 @@ export function ThemeProvider({ children }) {
     document.documentElement.style.setProperty('--accent-color-hover', colors.hover)
     localStorage.setItem("accentColor", accentColor)
   }, [accentColor])
+
+  // Apply Preset Themes
+  useEffect(() => {
+    const root = document.documentElement
+    const classesToRemove = Array.from(root.classList).filter(c => c.startsWith('theme-preset-'))
+    classesToRemove.forEach(c => root.classList.remove(c))
+    
+    if (presetTheme && presetTheme !== "default") {
+      root.classList.add(`theme-preset-${presetTheme}`)
+    }
+    localStorage.setItem("presetTheme", presetTheme)
+  }, [presetTheme])
 
   // Save other preferences to local storage
   const handleSetChatWallpaper = (val) => {
@@ -117,7 +132,9 @@ export function ThemeProvider({ children }) {
       readReceipts,
       setReadReceipts: handleSetReadReceipts,
       playSounds,
-      setPlaySounds: handleSetPlaySounds
+      setPlaySounds: handleSetPlaySounds,
+      presetTheme,
+      setPresetTheme
     }}>
       <div className={`font-size-${fontSize}`}>
         {children}

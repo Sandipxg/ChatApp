@@ -175,7 +175,7 @@ function AppLayout() {
   // Logged-out shell view
   if (isAuthPage) {
     return (
-      <div className="min-h-screen bg-[#f3f4f6] dark:bg-slate-950 flex flex-col justify-center">
+      <div className="min-h-screen bg-bg-app flex flex-col justify-center">
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -188,13 +188,13 @@ function AppLayout() {
   }
 
   return (
-    <div className="h-screen w-screen flex bg-gray-50 dark:bg-[#0b0f17] overflow-hidden select-none">
+    <div className="h-screen w-screen flex bg-bg-app text-text-body overflow-hidden select-none">
       
       {/* ── 2. MAIN CONTENT VIEW WITH HEADER ── */}
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
         
         {/* Global Dynamic Top Header */}
-        <header className="h-[72px] bg-white/90 dark:bg-gray-900/95 border-b border-gray-200/60 dark:border-gray-800/80 flex-shrink-0 flex items-center justify-between px-6 z-30 select-none backdrop-blur-sm">
+        <header className="h-[72px] bg-bg-card/90 border-b border-border-app flex-shrink-0 flex items-center justify-between px-6 z-30 select-none backdrop-blur-sm">
           
           {/* Left: Dynamic section title */}
           <div className="flex items-center gap-3">
@@ -221,7 +221,7 @@ function AppLayout() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-all cursor-pointer select-none group"
+                className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-2xl hover:bg-bg-app/80 transition-all cursor-pointer select-none group"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-accent/20 ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all">
                   {firstLetter}
@@ -231,20 +231,20 @@ function AppLayout() {
 
               {/* Profile Dropdown Menu */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2.5 w-52 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 z-50 animate-fade-up text-left overflow-hidden">
-                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800/80 flex items-center gap-3">
+                <div className="absolute right-0 mt-2.5 w-52 bg-bg-card border border-border-app rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 z-50 animate-fade-up text-left overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border-app flex items-center gap-3">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-accent/20 flex-shrink-0">
                       {firstLetter}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{currentUser.username}</p>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate mt-0.5">{currentUser.email || 'Logged in'}</p>
+                      <p className="text-xs font-bold text-text-title truncate">{currentUser.username}</p>
+                      <p className="text-[10px] text-text-body opacity-60 font-medium truncate mt-0.5">{currentUser.email || 'Logged in'}</p>
                     </div>
                   </div>
                   <div className="py-1">
                     <button
                       onClick={() => { setShowUserMenu(false); navigate("/settings", { state: { activeTab: "account" } }) }}
-                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors"
+                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-text-body hover:bg-bg-app hover:text-text-title cursor-pointer transition-colors"
                     >
                       <SettingsIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
                       <span>Settings</span>

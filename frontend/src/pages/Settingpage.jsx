@@ -81,6 +81,25 @@ const ACCENT_OPTIONS = [
   { key: 'purple', hex: '#a855f7', label: 'Purple' }
 ]
 
+const PRESET_THEMES = [
+  { id: "default", label: "Default", colors: ["#f8f9fc", "#ffffff", "#6366f1"] },
+  { id: "sunset", label: "Sunset", colors: ["#fff8f8", "#fff0f3", "#ff4d6d"] },
+  { id: "forest", label: "Forest", colors: ["#f4fbf7", "#e8f5ed", "#2d9d61"] },
+  { id: "dracula", label: "Dracula", colors: ["#282a36", "#1e1f29", "#ff79c6"] },
+  { id: "retro", label: "Retro", colors: ["#ece3ca", "#e4d8b4", "#a27b38"] },
+  { id: "synthwave", label: "Synthwave", colors: ["#1a0b2e", "#0f051d", "#f10086"] },
+  { id: "cyberpunk", label: "Cyberpunk", colors: ["#efe600", "#130018", "#00f0ff"] },
+  { id: "valentine", label: "Valentine", colors: ["#ffe5ec", "#ffc2d1", "#ff477e"] },
+  { id: "luxury", label: "Luxury", colors: ["#12131a", "#090a0f", "#c5a880"] },
+  { id: "aqua", label: "Aqua", colors: ["#e0f2fe", "#bae6fd", "#0284c7"] },
+  { id: "pastel", label: "Pastel", colors: ["#fcf6f5", "#faeceb", "#e5989b"] },
+  { id: "coffee", label: "Coffee", colors: ["#efebe9", "#d7ccc8", "#6d4c41"] },
+  { id: "nord", label: "Nord", colors: ["#2e3440", "#3b4252", "#88c0d0"] },
+  { id: "bumblebee", label: "Bumblebee", colors: ["#ffeb3b", "#212121", "#ffd600"] },
+  { id: "cupcake", label: "Cupcake", colors: ["#faf7f5", "#efeae6", "#65c3c8"] },
+  { id: "dim", label: "Dim", colors: ["#15202b", "#192734", "#1da1f2"] }
+]
+
 function SettingsPage() {
   const { 
     theme, setTheme, 
@@ -89,7 +108,8 @@ function SettingsPage() {
     fontSize, setFontSize,
     enterToSend, setEnterToSend,
     readReceipts, setReadReceipts,
-    playSounds, setPlaySounds
+    playSounds, setPlaySounds,
+    presetTheme, setPresetTheme
   } = useContext(ThemeContext)
   
   const { currentUser, logout, deleteAccount, updateReminderSettings } = useAuth()
@@ -236,10 +256,10 @@ function SettingsPage() {
   const fontSizeLabel = fontSize === "small" ? "Small" : fontSize === "large" ? "Large" : "Medium"
 
   return (
-    <div className="h-full w-full bg-white dark:bg-gray-950 overflow-hidden font-sans select-none flex">
+    <div className="h-full w-full bg-bg-app overflow-hidden font-sans select-none flex">
       
       {/* ── 1. SETTINGS CATEGORIES SIDEBAR ── */}
-      <aside className="w-full md:w-[220px] flex-shrink-0 border-r border-gray-100 dark:border-gray-800/80 flex flex-col justify-between py-5 bg-white dark:bg-gray-900 select-none">
+      <aside className="w-full md:w-[220px] flex-shrink-0 border-r border-border-app flex flex-col justify-between py-5 bg-bg-sidebar select-none">
         <div className="flex flex-col gap-0.5 px-3">
 
           <button
@@ -247,7 +267,7 @@ function SettingsPage() {
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "account"
                 ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-app"
             }`}
           >
             <LockIcon className="w-5 h-5 flex-shrink-0" />
@@ -259,7 +279,7 @@ function SettingsPage() {
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "notifications"
                 ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-app"
             }`}
           >
             <BellIcon className="w-5 h-5 flex-shrink-0" />
@@ -271,7 +291,7 @@ function SettingsPage() {
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "appearance"
                 ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-app"
             }`}
           >
             <PaintIcon className="w-5 h-5 flex-shrink-0" />
@@ -291,7 +311,7 @@ function SettingsPage() {
       </aside>
 
       {/* ── 2. SETTINGS CONTENT PANEL ── */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50 dark:bg-[#0d1117] select-text">
+      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-bg-app select-text">
         <div className="max-w-xl mx-auto space-y-8">
 
 
@@ -300,24 +320,24 @@ function SettingsPage() {
           {activeTab === "appearance" && (
             <div className="space-y-8 animate-slide-in">
               
-              {/* Theme Selector Section */}
+              {/* Theme Mode Selector Section */}
               <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Theme</h3>
+                <h3 className="text-xs font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none">Theme Mode</h3>
                 <div className="grid grid-cols-3 gap-3">
                   
                   {/* Light theme card */}
                   <button
                     onClick={() => setTheme("light")}
-                    className={`p-5 bg-white dark:bg-gray-900 border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
+                    className={`p-5 bg-bg-card border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
                       theme === "light" 
                         ? "border-accent ring-2 ring-accent/20" 
-                        : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                        : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <svg className={`w-7.5 h-7.5 ${theme === "light" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m0 13.5V21m9.75-9h-2.25M4.5 12H2.25m16.909-6.909-1.591 1.59M5.59 18.41l1.59-1.59m11.228 0 1.59 1.59m-11.228-11.23-1.59-1.59M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z" />
                     </svg>
-                    <span className={`text-xs font-extrabold ${theme === "light" ? "text-gray-900 dark:text-white" : "text-gray-450"}`}>Light</span>
+                    <span className={`text-xs font-extrabold ${theme === "light" ? "text-text-title" : "text-text-body opacity-70"}`}>Light</span>
                     {theme === "light" && (
                       <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
                         <CheckmarkIcon className="w-3 h-3" />
@@ -328,16 +348,16 @@ function SettingsPage() {
                   {/* Dark theme card */}
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`p-5 bg-white dark:bg-gray-900 border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
+                    className={`p-5 bg-bg-card border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
                       theme === "dark" 
                         ? "border-accent ring-2 ring-accent/20" 
-                        : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                        : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <svg className={`w-7.5 h-7.5 ${theme === "dark" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
                     </svg>
-                    <span className={`text-xs font-extrabold ${theme === "dark" ? "text-gray-900 dark:text-white" : "text-gray-450"}`}>Dark</span>
+                    <span className={`text-xs font-extrabold ${theme === "dark" ? "text-text-title" : "text-text-body opacity-70"}`}>Dark</span>
                     {theme === "dark" && (
                       <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
                         <CheckmarkIcon className="w-3 h-3" />
@@ -348,16 +368,16 @@ function SettingsPage() {
                   {/* System theme card */}
                   <button
                     onClick={() => setTheme("system")}
-                    className={`p-5 bg-white dark:bg-gray-900 border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
+                    className={`p-5 bg-bg-card border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
                       theme === "system" 
                         ? "border-accent ring-2 ring-accent/20" 
-                        : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                        : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <svg className={`w-7.5 h-7.5 ${theme === "system" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25M21 5.25A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
                     </svg>
-                    <span className={`text-xs font-extrabold ${theme === "system" ? "text-gray-900 dark:text-white" : "text-gray-450"}`}>System</span>
+                    <span className={`text-xs font-extrabold ${theme === "system" ? "text-text-title" : "text-text-body opacity-70"}`}>System</span>
                     {theme === "system" && (
                       <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
                         <CheckmarkIcon className="w-3 h-3" />
@@ -367,10 +387,41 @@ function SettingsPage() {
                 </div>
               </div>
 
+              {/* Theme Presets Section */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none">Theme Presets</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {PRESET_THEMES.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setPresetTheme(t.id)}
+                      className={`group flex flex-col items-center gap-2 p-3 rounded-3xl border-2 transition-all cursor-pointer ${
+                        presetTheme === t.id
+                          ? "border-accent ring-2 ring-accent/20 bg-accent/5"
+                          : "border-border-app hover:border-gray-300 dark:hover:border-gray-700 bg-bg-card"
+                      }`}
+                    >
+                      <div className="relative h-10 w-full rounded-2xl overflow-hidden shadow-xs flex border border-border-app/40" style={{ backgroundColor: t.colors[0] }}>
+                        <div className="w-1/2 h-full flex flex-col p-1 gap-1">
+                          <div className="h-full rounded-lg" style={{ backgroundColor: t.colors[1] }}></div>
+                        </div>
+                        <div className="w-1/2 h-full flex flex-col p-1 gap-1 justify-between items-end">
+                          <div className="w-3.5 h-3.5 rounded-full flex-shrink-0" style={{ backgroundColor: t.colors[2] }}></div>
+                          <div className="w-full h-1.5 rounded-sm" style={{ backgroundColor: t.colors[1] }}></div>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold truncate w-full text-center text-text-title select-none">
+                        {t.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Accent Color Section */}
               <div className="space-y-3">
-                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Accent Color</h3>
-                <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-4.5 flex items-center gap-4.5 justify-center">
+                <h3 className="text-sm font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none">Accent Color</h3>
+                <div className="bg-bg-card border border-border-app rounded-3xl p-4.5 flex items-center gap-4.5 justify-center">
                   {ACCENT_OPTIONS.map((opt) => {
                     const isSelected = accentColor === opt.key
                     return (
@@ -396,8 +447,8 @@ function SettingsPage() {
                   {/* No wallpaper card */}
                   <button
                     onClick={() => setChatWallpaper("none")}
-                    className={`aspect-[3/4] rounded-3xl border flex flex-col items-center justify-center bg-white dark:bg-gray-800 cursor-pointer transition-all relative overflow-hidden ${
-                      chatWallpaper === "none" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                    className={`aspect-[3/4] rounded-3xl border flex flex-col items-center justify-center bg-bg-card cursor-pointer transition-all relative overflow-hidden ${
+                      chatWallpaper === "none" ? "border-accent ring-2 ring-accent/20" : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <svg className="w-6 h-6 text-gray-350 dark:text-gray-550" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -410,7 +461,7 @@ function SettingsPage() {
                   <button
                     onClick={() => setChatWallpaper("sunset")}
                     className={`aspect-[3/4] rounded-3xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-orange-100 to-rose-100 dark:from-orange-950/20 dark:to-rose-950/20 ${
-                      chatWallpaper === "sunset" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      chatWallpaper === "sunset" ? "border-accent ring-2 ring-accent/20" : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <div className="absolute bottom-2 right-2.5 text-[9px] text-orange-550 dark:text-orange-400 font-extrabold select-none">Sunset</div>
@@ -420,7 +471,7 @@ function SettingsPage() {
                   <button
                     onClick={() => setChatWallpaper("ocean")}
                     className={`aspect-[3/4] rounded-3xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-sky-100 to-indigo-100 dark:from-sky-950/20 dark:to-indigo-950/20 ${
-                      chatWallpaper === "ocean" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      chatWallpaper === "ocean" ? "border-accent ring-2 ring-accent/20" : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <div className="absolute bottom-2 right-2.5 text-[9px] text-blue-550 dark:text-blue-400 font-extrabold select-none">Ocean</div>
@@ -430,7 +481,7 @@ function SettingsPage() {
                   <button
                     onClick={() => setChatWallpaper("forest")}
                     className={`aspect-[3/4] rounded-3xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-emerald-50 to-teal-50 dark:from-emerald-950/10 dark:to-teal-950/10 ${
-                      chatWallpaper === "forest" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      chatWallpaper === "forest" ? "border-accent ring-2 ring-accent/20" : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <div className="absolute bottom-2 right-2.5 text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold select-none">Forest</div>
@@ -441,7 +492,7 @@ function SettingsPage() {
                     onClick={() => setChatWallpaper("mountain")}
                     style={{ backgroundImage: "url('/mountain.png')" }}
                     className={`aspect-[3/4] rounded-3xl border cursor-pointer bg-cover bg-center transition-all relative overflow-hidden ${
-                      chatWallpaper === "mountain" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                      chatWallpaper === "mountain" ? "border-accent ring-2 ring-accent/20" : "border-border-app hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
                     <div className="absolute bottom-2 right-2.5 text-[9px] text-slate-100 font-extrabold drop-shadow select-none">Mountain</div>
@@ -450,12 +501,12 @@ function SettingsPage() {
                 </div>
               </div>
 
-              {/* Font Size Section */}
+               {/* Font Size Section */}
               <div className="space-y-3">
-                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Font Size</h3>
+                <h3 className="text-sm font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none">Font Size</h3>
                 
-                <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-6 space-y-4">
-                  <div className="flex items-center justify-between text-gray-400 select-none">
+                <div className="bg-bg-card border border-border-app rounded-3xl p-6 space-y-4">
+                  <div className="flex items-center justify-between text-text-body opacity-60 select-none">
                     <span className="text-xs font-medium">A</span>
                     <span className="text-xs font-bold text-accent">{fontSizeLabel}</span>
                     <span className="text-lg font-bold">A</span>
@@ -472,7 +523,7 @@ function SettingsPage() {
                       const val = e.target.value
                       setFontSize(val === "1" ? "small" : val === "3" ? "large" : "medium")
                     }}
-                    className="w-full h-1 bg-gray-150 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-accent"
+                    className="w-full h-1 bg-bg-app rounded-lg appearance-none cursor-pointer accent-accent"
                   />
                 </div>
               </div>
@@ -483,12 +534,12 @@ function SettingsPage() {
           {/* ── 2C. NOTIFICATIONS TAB ── */}
           {activeTab === "notifications" && (
             <div className="space-y-6 animate-slide-in">
-              <h2 className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Push Notifications</h2>
+              <h2 className="text-xs font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none">Push Notifications</h2>
               
-              <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-6 text-left space-y-4 shadow-sm">
+              <div className="bg-bg-card border border-border-app rounded-3xl p-6 text-left space-y-4 shadow-sm">
                 <div className="space-y-1">
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">Push permission settings</p>
-                  <p className="text-xs text-gray-400">Receive desktop alert notifications when messages arrive.</p>
+                  <p className="text-sm font-bold text-text-title">Push permission settings</p>
+                  <p className="text-xs text-text-body opacity-60">Receive desktop alert notifications when messages arrive.</p>
                 </div>
 
                 {permission === 'denied' ? (
@@ -522,14 +573,14 @@ function SettingsPage() {
               </div>
 
               {/* Reminders section inside notifications */}
-              <h2 className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none mt-8">Daily Reminders</h2>
+              <h2 className="text-xs font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none mt-8">Daily Reminders</h2>
               
-              <form onSubmit={handleSaveReminder} className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-6 text-left space-y-4 shadow-sm">
+              <form onSubmit={handleSaveReminder} className="bg-bg-card border border-border-app rounded-3xl p-6 text-left space-y-4 shadow-sm">
                 
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">Enable Reminders</p>
-                    <p className="text-xs text-gray-400">Receive a daily scheduled push alert.</p>
+                    <p className="text-sm font-bold text-text-title">Enable Reminders</p>
+                    <p className="text-xs text-text-body opacity-60">Receive a daily scheduled push alert.</p>
                   </div>
                   <button
                     type="button"
@@ -547,9 +598,9 @@ function SettingsPage() {
                       type="time"
                       value={reminderTime}
                       onChange={(e) => setReminderTime(e.target.value)}
-                      className="px-4.5 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-full text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent/20"
+                      className="px-4.5 py-2.5 bg-bg-app border border-border-app text-text-title rounded-full text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent/20"
                     />
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                    <span className="text-[10px] text-text-body opacity-60 font-bold uppercase tracking-wider">
                       Detected Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
                     </span>
                   </div>
@@ -577,7 +628,7 @@ function SettingsPage() {
                 <p className="text-[11px] text-gray-400">These actions are permanent and cannot be undone.</p>
               </div>
               
-              <form onSubmit={handleDeleteAccount} className="bg-white dark:bg-gray-900 border border-red-100/80 dark:border-red-950/50 rounded-3xl p-6 text-left space-y-4 shadow-sm">
+              <form onSubmit={handleDeleteAccount} className="bg-bg-card border border-red-100/80 dark:border-red-950/50 rounded-3xl p-6 text-left space-y-4 shadow-sm">
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 rounded-2xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center flex-shrink-0 mt-0.5">
                     <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -586,18 +637,18 @@ function SettingsPage() {
                   </div>
                   <div className="space-y-1">
                     <p className="text-sm font-bold text-red-600 dark:text-red-400">Delete Account</p>
-                    <p className="text-xs text-gray-400 leading-relaxed">This will permanently delete your account, credentials, and message history.</p>
+                    <p className="text-xs text-text-body opacity-60 leading-relaxed">This will permanently delete your account, credentials, and message history.</p>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Confirm Password</label>
+                  <label className="text-[10px] font-bold text-text-body opacity-60 uppercase tracking-wider">Confirm Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password to confirm"
-                    className="w-full max-w-sm px-5 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-250 dark:border-gray-700 text-gray-900 dark:text-white rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-red-450/20 focus:border-red-450/40 transition-all"
+                    className="w-full max-w-sm px-5 py-3 bg-bg-app border border-border-app text-text-title rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-red-450/20 focus:border-red-450/40 transition-all"
                   />
                 </div>
 

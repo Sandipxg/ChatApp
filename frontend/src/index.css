@@ -5,6 +5,215 @@
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --color-accent: var(--accent-color, #6366f1);
   --color-accent-hover: var(--accent-color-hover, #4f46e5);
+  
+  --color-bg-app: var(--bg-app, #f8f9fc);
+  --color-bg-card: var(--bg-card, #ffffff);
+  --color-bg-sidebar: var(--bg-sidebar, #ffffff);
+  --color-border-app: var(--border-app, rgba(0, 0, 0, 0.08));
+  --color-text-title: var(--text-title, #111827);
+  --color-text-body: var(--text-body, #374151);
+}
+
+:root {
+  --bg-app: #f8f9fc;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+  --border-app: rgba(0, 0, 0, 0.08);
+  --text-title: #111827;
+  --text-body: #374151;
+}
+
+.dark {
+  --bg-app: #0d1117;
+  --bg-card: #161b22;
+  --bg-sidebar: #161b22;
+  --border-app: rgba(255, 255, 255, 0.08);
+  --text-title: #f0f6fc;
+  --text-body: #c9d1d9;
+}
+
+/* ══════════════════════════════════════════════
+   15+ PRESET THEMES (Dracula, Synthwave, Cyberpunk, etc.)
+   ══════════════════════════════════════════════ */
+
+/* 1. Sunset */
+.theme-preset-sunset {
+  --bg-app: #fff8f8;
+  --bg-card: #fff0f3;
+  --bg-sidebar: #ffeef2;
+  --border-app: #ffccd5;
+  --text-title: #590d22;
+  --text-body: #800f2f;
+  --accent-color: #ff4d6d;
+  --accent-color-hover: #ff758f;
+}
+
+/* 2. Forest */
+.theme-preset-forest {
+  --bg-app: #f4fbf7;
+  --bg-card: #e8f5ed;
+  --bg-sidebar: #ddf0e5;
+  --border-app: #b8e2cb;
+  --text-title: #113f27;
+  --text-body: #1b5e3a;
+  --accent-color: #2d9d61;
+  --accent-color-hover: #34b36f;
+}
+
+/* 3. Dracula */
+.theme-preset-dracula {
+  --bg-app: #282a36;
+  --bg-card: #1e1f29;
+  --bg-sidebar: #21222c;
+  --border-app: #44475a;
+  --text-title: #f8f8f2;
+  --text-body: #bd93f9;
+  --accent-color: #ff79c6;
+  --accent-color-hover: #bd93f9;
+}
+
+/* 4. Retro */
+.theme-preset-retro {
+  --bg-app: #ece3ca;
+  --bg-card: #e4d8b4;
+  --bg-sidebar: #d9ca9e;
+  --border-app: #b8a26c;
+  --text-title: #28241b;
+  --text-body: #403a2b;
+  --accent-color: #a27b38;
+  --accent-color-hover: #b88d44;
+}
+
+/* 5. Synthwave */
+.theme-preset-synthwave {
+  --bg-app: #1a0b2e;
+  --bg-card: #0f051d;
+  --bg-sidebar: #140824;
+  --border-app: #381b5c;
+  --text-title: #fdf6ff;
+  --text-body: #e6b8ff;
+  --accent-color: #f10086;
+  --accent-color-hover: #f738a4;
+}
+
+/* 6. Cyberpunk */
+.theme-preset-cyberpunk {
+  --bg-app: #efe600;
+  --bg-card: #130018;
+  --bg-sidebar: #000000;
+  --border-app: #00ff66;
+  --text-title: #00f0ff;
+  --text-body: #ffffff;
+  --accent-color: #00f0ff;
+  --accent-color-hover: #00d8e6;
+}
+
+/* 7. Valentine */
+.theme-preset-valentine {
+  --bg-app: #ffe5ec;
+  --bg-card: #ffc2d1;
+  --bg-sidebar: #ffb3c6;
+  --border-app: #ff85a1;
+  --text-title: #5c0632;
+  --text-body: #800e4e;
+  --accent-color: #ff477e;
+  --accent-color-hover: #ff7096;
+}
+
+/* 8. Luxury */
+.theme-preset-luxury {
+  --bg-app: #12131a;
+  --bg-card: #090a0f;
+  --bg-sidebar: #050608;
+  --border-app: #c5a880;
+  --text-title: #e5c199;
+  --text-body: #a2907d;
+  --accent-color: #c5a880;
+  --accent-color-hover: #d3b793;
+}
+
+/* 9. Aqua */
+.theme-preset-aqua {
+  --bg-app: #e0f2fe;
+  --bg-card: #bae6fd;
+  --bg-sidebar: #7dd3fc;
+  --border-app: #38bdf8;
+  --text-title: #0369a1;
+  --text-body: #075985;
+  --accent-color: #0284c7;
+  --accent-color-hover: #0369a1;
+}
+
+/* 10. Pastel */
+.theme-preset-pastel {
+  --bg-app: #fcf6f5;
+  --bg-card: #faeceb;
+  --bg-sidebar: #f5dfdd;
+  --border-app: #eac1bd;
+  --text-title: #7d524f;
+  --text-body: #966764;
+  --accent-color: #e5989b;
+  --accent-color-hover: #ffb7b2;
+}
+
+/* 11. Coffee */
+.theme-preset-coffee {
+  --bg-app: #efebe9;
+  --bg-card: #d7ccc8;
+  --bg-sidebar: #bcaaa4;
+  --border-app: #8d6e63;
+  --text-title: #3e2723;
+  --text-body: #4e342e;
+  --accent-color: #6d4c41;
+  --accent-color-hover: #8d6e63;
+}
+
+/* 12. Nord */
+.theme-preset-nord {
+  --bg-app: #2e3440;
+  --bg-card: #3b4252;
+  --bg-sidebar: #434c5e;
+  --border-app: #4c566a;
+  --text-title: #eceff4;
+  --text-body: #d8dee9;
+  --accent-color: #88c0d0;
+  --accent-color-hover: #8fbcbb;
+}
+
+/* 13. Bumblebee */
+.theme-preset-bumblebee {
+  --bg-app: #ffeb3b;
+  --bg-card: #212121;
+  --bg-sidebar: #111111;
+  --border-app: #ffd600;
+  --text-title: #ffffff;
+  --text-body: #ffeb3b;
+  --accent-color: #ffd600;
+  --accent-color-hover: #ffea00;
+}
+
+/* 14. Cupcake */
+.theme-preset-cupcake {
+  --bg-app: #faf7f5;
+  --bg-card: #efeae6;
+  --bg-sidebar: #e3dbd5;
+  --border-app: #d3c7be;
+  --text-title: #2d1e13;
+  --text-body: #4a3424;
+  --accent-color: #65c3c8;
+  --accent-color-hover: #3abff8;
+}
+
+/* 15. Dim */
+.theme-preset-dim {
+  --bg-app: #15202b;
+  --bg-card: #192734;
+  --bg-sidebar: #22303c;
+  --border-app: #38444d;
+  --text-title: #ffffff;
+  --text-body: #8899a6;
+  --accent-color: #1da1f2;
+  --accent-color-hover: #1991db;
 }
 
 @layer base {
@@ -12,6 +221,9 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg-app);
+    color: var(--text-body);
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
