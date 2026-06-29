@@ -29,12 +29,12 @@ export function AuthProvider({ children }) {
     }
   }, [session, isPending])
 
-  async function signup(email, username, password) {
+  async function signup(email, username, password, name) {
     const { data, error } = await authClient.signUp.email({
       email,
       password,
       username,
-      name: username,
+      name: name || username,
     })
 
     if (error) {

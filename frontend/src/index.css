@@ -3,10 +3,110 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --color-accent: var(--accent-color, #6366f1);
+  --color-accent-hover: var(--accent-color-hover, #4f46e5);
 }
 
 @layer base {
   body {
     font-family: var(--font-sans);
   }
+}
+
+/* Wallpaper styles */
+.wallpaper-none {
+  background-color: var(--color-bg-base, #ffffff);
+}
+.dark .wallpaper-none {
+  background-color: var(--color-bg-base, #0b0f17);
+}
+
+.wallpaper-sunset {
+  background: linear-gradient(135deg, #ffedfa 0%, #ffdcd7 100%);
+  background-size: cover;
+}
+.dark .wallpaper-sunset {
+  background: linear-gradient(135deg, #2d1b28 0%, #301714 100%);
+  background-size: cover;
+}
+
+.wallpaper-ocean {
+  background: linear-gradient(135deg, #e0f2fe 0%, #e0e7ff 100%);
+  background-size: cover;
+}
+.dark .wallpaper-ocean {
+  background: linear-gradient(135deg, #0f233a 0%, #111827 100%);
+  background-size: cover;
+}
+
+.wallpaper-forest {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ccfbf1 100%);
+  background-size: cover;
+}
+.dark .wallpaper-forest {
+  background: linear-gradient(135deg, #06241b 0%, #031e1c 100%);
+  background-size: cover;
+}
+
+.wallpaper-mountain {
+  background-image: url('/mountain.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.dark .wallpaper-mountain {
+  background-image: url('/mountain.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-blend-mode: multiply;
+  background-color: #374151;
+}
+
+/* Font Size Classes */
+.font-size-small {
+  font-size: 0.825rem !important; /* ~13px */
+}
+.font-size-medium {
+  font-size: 0.925rem !important; /* ~15px */
+}
+.font-size-large {
+  font-size: 1.05rem !important; /* ~17px */
+}
+
+/* Slide in animation */
+@keyframes slideIn {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.animate-slide-in {
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Custom scrollbar matching mockup aesthetics */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.2);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.4);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.3);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.5);
 }

@@ -21,7 +21,7 @@ const swaggerDocument = require('./swagger/swagger.json')
 // Global limiter — all routes: 100 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: process.env.NODE_ENV === 'production' ? 100 : 10000,
   standardHeaders: true,   // sends RateLimit-* headers to client
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' }
@@ -30,7 +30,7 @@ const globalLimiter = rateLimit({
 // Auth limiter — login/signup only: 10 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: process.env.NODE_ENV === 'production' ? 10 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts, please try again in 15 minutes.' }
@@ -38,9 +38,6 @@ const authLimiter = rateLimit({
 
 const app = express()
 
-// Security headers — must be first
-app.use(helmet())
-app.use(globalLimiter)
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:5173',
@@ -56,6 +53,10 @@ app.use(cors({
   },
   credentials: true
 }))
+
+// Security headers and rate limiting
+app.use(helmet())
+app.use(globalLimiter)
 
 // Custom auth endpoints MUST be defined before the Better Auth catch-all handler.
 // This allows Express to intercept our custom actions (reminder settings, deleteaccount, etc.)

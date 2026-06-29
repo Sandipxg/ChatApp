@@ -1,8 +1,8 @@
 import { useContext, useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import ThemeContext from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"
-import { useInstall } from '../context/InstallContext'
+
 import {
   subscribeUserToPush,
   unsubscribeUserFromPush,
@@ -11,111 +11,120 @@ import {
 } from "../services/pushService"
 
 // Custom SVG Icons
-function SettingsIcon({ className }) {
+
+
+function LockIcon({ className = "w-5 h-5" }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0V10.5m-2.852 0a1.5 1.5 0 0 0-1.488 1.482l-.099 7.04A1.5 1.5 0 0 0 2.5 20.5h19a1.5 1.5 0 0 0 1.487-1.478l-.099-7.04a1.5 1.5 0 0 0-1.488-1.482H3.75Z" />
     </svg>
   )
 }
 
-function BellIcon({ className }) {
+function BellIcon({ className = "w-5 h-5" }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9z" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
     </svg>
   )
 }
 
-function ClockIcon({ className }) {
+function GearIcon({ className = "w-5 h-5" }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.43l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.75-.43-.991l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.645-.869l.214-1.28Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
     </svg>
   )
 }
 
-function UserIcon({ className }) {
+function PaintIcon({ className = "w-5 h-5" }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-3.078 0L3.75 17.5a.75.75 0 1 0 .75 1.3l2.7-1.378a1.5 1.5 0 0 1 1.54 0L11.25 19a.75.75 0 1 0 .75-1.3l-2.47-1.578Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5a4.5 4.5 0 0 0-4.5-4.5c-1.637 0-3.136.877-3.957 2.296L7.696 12.5A4.5 4.5 0 0 0 11.25 19.5c1.638 0 3.137-.878 3.957-2.297l4.097-7.202c.62-1.091.946-2.333.946-3.501Z" />
     </svg>
   )
 }
 
-function SunIcon({ className }) {
+
+function LogoutIcon({ className = "w-5 h-5" }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="5" />
-      <line x1="12" y1="1" x2="12" y2="3" />
-      <line x1="12" y1="21" x2="12" y2="23" />
-      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-      <line x1="1" y1="12" x2="3" y2="12" />
-      <line x1="21" y1="12" x2="23" y2="12" />
-      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
     </svg>
   )
 }
 
-function MoonIcon({ className }) {
+function ChevronRightIcon({ className = "w-4 h-4" }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
     </svg>
   )
 }
+
+function CheckmarkIcon({ className = "w-4 h-4" }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+    </svg>
+  )
+}
+
+const ACCENT_OPTIONS = [
+  { key: 'teal', hex: '#14b8a6', label: 'Mint' },
+  { key: 'blue', hex: '#3b82f6', label: 'Blue' },
+  { key: 'indigo', hex: '#6366f1', label: 'Indigo' },
+  { key: 'rose', hex: '#ec4899', label: 'Rose' },
+  { key: 'orange', hex: '#f97316', label: 'Orange' },
+  { key: 'purple', hex: '#a855f7', label: 'Purple' }
+]
 
 function SettingsPage() {
-  const { theme, setTheme } = useContext(ThemeContext)
-  const { currentUser, deleteAccount, updateReminderSettings } = useAuth()
-  const { isInstallable, isInstalled, install } = useInstall()
-  const navigate = useNavigate()
+  const { 
+    theme, setTheme, 
+    accentColor, setAccentColor,
+    chatWallpaper, setChatWallpaper,
+    fontSize, setFontSize,
+    enterToSend, setEnterToSend,
+    readReceipts, setReadReceipts,
+    playSounds, setPlaySounds
+  } = useContext(ThemeContext)
   
-  const [activeTab, setActiveTab] = useState("general")
+  const { currentUser, logout, deleteAccount, updateReminderSettings } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+  
+  const [activeTab, setActiveTab] = useState("account")
+  
+  // Forms & account action states
   const [password, setPassword] = useState("")
   const [deleteError, setDeleteError] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Push notification permissions and subscription states
+  // Push notifications state variables
   const [permission, setPermission] = useState(() => typeof Notification !== 'undefined' ? Notification.permission : 'default')
   const [isSubscribed, setIsSubscribed] = useState(false)
   const [pushLoading, setPushLoading] = useState(false)
   const [pushError, setPushError] = useState("")
   const [pushSuccess, setPushSuccess] = useState("")
 
-  // Daily reminder settings states
+  // Daily reminder states
   const [reminderEnabled, setReminderEnabled] = useState(() => currentUser?.reminderTime !== null)
   const [reminderTime, setReminderTime] = useState(() => currentUser?.reminderTime || '20:00')
   const [reminderLoading, setReminderLoading] = useState(false)
   const [reminderSuccess, setReminderSuccess] = useState("")
   const [reminderError, setReminderError] = useState("")
 
-  // Save reminder schedule preferences to database
-  async function handleSaveReminder(e) {
-    e.preventDefault()
-    setReminderError("")
-    setReminderSuccess("")
-    setReminderLoading(true)
-
-    try {
-      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-      const targetTime = reminderEnabled ? reminderTime : null
-      await updateReminderSettings(targetTime, tz)
-      setReminderSuccess("Reminder settings updated successfully!")
-    } catch (err) {
-      setReminderError(err.message || 'Failed to update reminder settings.')
-    } finally {
-      setReminderLoading(false)
+  // Synchronize internal activeTab with parent layout router state clicks
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab)
     }
-  }
+  }, [location.state?.activeTab])
 
-  // Check initial subscription status on mount
+  // Fetch Push subscription state on mount
   useEffect(() => {
     async function checkSubscription() {
       try {
@@ -128,7 +137,28 @@ function SettingsPage() {
     checkSubscription()
   }, [])
 
-  // Toggle subscriptions (Subscribe/Unsubscribe or Ask Permission)
+
+
+  // Save daily reminders
+  async function handleSaveReminder(e) {
+    e.preventDefault()
+    setReminderError("")
+    setReminderSuccess("")
+    setReminderLoading(true)
+
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+      const targetTime = reminderEnabled ? reminderTime : null
+      await updateReminderSettings(targetTime, tz)
+      setReminderSuccess("Daily reminders saved!")
+    } catch (err) {
+      setReminderError(err.message || 'Failed to update reminder.')
+    } finally {
+      setReminderLoading(false)
+    }
+  }
+
+  // Handle Notifications Setup
   async function handleToggleNotifications() {
     setPushError("")
     setPushSuccess("")
@@ -150,39 +180,35 @@ function SettingsPage() {
         if (isSubscribed) {
           await unsubscribeUserFromPush()
           setIsSubscribed(false)
-          setPushSuccess("Successfully unsubscribed from notifications.")
+          setPushSuccess("Unsubscribed from notifications.")
         } else {
           await subscribeUserToPush()
           setIsSubscribed(true)
-          setPushSuccess("Successfully subscribed to notifications!")
+          setPushSuccess("Subscribed to notifications!")
         }
       } else {
-        throw new Error('Permission to show notifications was denied.')
+        throw new Error('Permission denied.')
       }
     } catch (err) {
-      setPushError(err.message || 'An error occurred while updating notification settings.')
+      setPushError(err.message || 'An error occurred.')
     } finally {
       setPushLoading(false)
     }
   }
 
-  // Send a test notification to verified active subscriptions
   async function handleSendTestPush() {
     setPushError("")
     setPushSuccess("")
     setPushLoading(true)
-
     try {
       const result = await triggerTestPush()
-      setPushSuccess(result.message || "Test push notification dispatched!")
+      setPushSuccess(result.message || "Test notification sent!")
     } catch (err) {
-      setPushError(err.message || 'Failed to trigger test push notification.')
+      setPushError(err.message || 'Failed to trigger test push.')
     } finally {
       setPushLoading(false)
     }
   }
-
-  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
 
   async function handleDeleteAccount(e) {
     e.preventDefault()
@@ -199,426 +225,388 @@ function SettingsPage() {
     }
   }
 
-  const formatReminderTimeDisplay = (time24) => {
-    if (!time24) return "12:00 AM"
-    const [hourStr, minStr] = time24.split(":")
-    const hour = parseInt(hourStr, 10)
-    const ampm = hour >= 12 ? "PM" : "AM"
-    const formattedHour = hour % 12 || 12
-    return `${formattedHour.toString().padStart(2, '0')}:${minStr} ${ampm}`
+  const handleLogoutClick = () => {
+    if (confirm("Are you sure you want to log out?")) {
+      logout()
+      navigate("/auth")
+    }
   }
 
+  // Font size display label
+  const fontSizeLabel = fontSize === "small" ? "Small" : fontSize === "large" ? "Large" : "Medium"
+
   return (
-    <div className="space-y-6">
+    <div className="h-full w-full bg-white dark:bg-gray-950 overflow-hidden font-sans select-none flex">
       
-      {/* Header */}
-      <div className="border-b border-[#f3f0f7] dark:border-gray-800 pb-5">
-        <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
-          Settings
-        </h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Customize your experience
-        </p>
-      </div>
+      {/* ── 1. SETTINGS CATEGORIES SIDEBAR ── */}
+      <aside className="w-full md:w-[240px] flex-shrink-0 border-r border-gray-150 dark:border-gray-800 flex flex-col justify-between py-4 bg-white dark:bg-gray-900 select-none">
+        <div className="flex flex-col gap-1 px-2.5">
 
-      {/* Two Column Dashboard Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-        
-        {/* Left Column: Vertical Nav tabs / Mobile Segmented Control */}
-        <div className="md:col-span-1">
-          {/* Mobile Segmented Control: Fits perfectly without scrolling */}
-          <div className="md:hidden bg-gray-100/80 dark:bg-gray-900/60 border border-[#f3f0f7] dark:border-gray-800/80 p-1 rounded-2xl grid grid-cols-4 gap-0.5 select-none w-full text-center mb-6">
-            <button
-              onClick={() => setActiveTab("general")}
-              className={`flex flex-col items-center justify-center py-2.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === "general"
-                  ? "bg-white dark:bg-gray-800 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-purple-700 dark:text-purple-400 font-bold"
-                  : "text-gray-500 dark:text-gray-400 font-medium"
-              }`}
-            >
-              <SettingsIcon className="w-4.5 h-4.5 mb-1" />
-              <span className="text-[10px] tracking-tight">General</span>
-            </button>
 
-            <button
-              onClick={() => setActiveTab("notifications")}
-              className={`flex flex-col items-center justify-center py-2.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === "notifications"
-                  ? "bg-white dark:bg-gray-800 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-purple-700 dark:text-purple-400 font-bold"
-                  : "text-gray-500 dark:text-gray-400 font-medium"
-              }`}
-            >
-              <BellIcon className="w-4.5 h-4.5 mb-1" />
-              <span className="text-[10px] tracking-tight">Notif</span>
-            </button>
+          <button
+            onClick={() => setActiveTab("account")}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              activeTab === "account"
+                ? "bg-indigo-50/70 text-accent dark:bg-gray-800"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+            }`}
+          >
+            <LockIcon className="w-4.5 h-4.5" />
+            <span>Account</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab("reminders")}
-              className={`flex flex-col items-center justify-center py-2.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === "reminders"
-                  ? "bg-white dark:bg-gray-800 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-purple-700 dark:text-purple-400 font-bold"
-                  : "text-gray-500 dark:text-gray-400 font-medium"
-              }`}
-            >
-              <ClockIcon className="w-4.5 h-4.5 mb-1" />
-              <span className="text-[10px] tracking-tight">Remind</span>
-            </button>
+          <button
+            onClick={() => setActiveTab("notifications")}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              activeTab === "notifications"
+                ? "bg-indigo-50/70 text-accent dark:bg-gray-800"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+            }`}
+          >
+            <BellIcon className="w-4.5 h-4.5" />
+            <span>Notifications</span>
+          </button>
 
-            <button
-              onClick={() => setActiveTab("account")}
-              className={`flex flex-col items-center justify-center py-2.5 rounded-xl transition-all cursor-pointer ${
-                activeTab === "account"
-                  ? "bg-white dark:bg-gray-800 shadow-[0_2px_8px_rgba(0,0,0,0.06)] text-purple-700 dark:text-purple-400 font-bold"
-                  : "text-gray-500 dark:text-gray-400 font-medium"
-              }`}
-            >
-              <UserIcon className="w-4.5 h-4.5 mb-1" />
-              <span className="text-[10px] tracking-tight">Account</span>
-            </button>
-          </div>
-
-          {/* Desktop Tab Control: Vertical list */}
-          <div className="hidden md:flex flex-col gap-1.5 select-none">
-            <button
-              onClick={() => setActiveTab("general")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "general"
-                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400"
-                  : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-              }`}
-            >
-              <SettingsIcon className="w-5 h-5" />
-              <span>General</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("notifications")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "notifications"
-                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400"
-                  : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-              }`}
-            >
-              <BellIcon className="w-5 h-5" />
-              <span>Notifications</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("reminders")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "reminders"
-                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400"
-                  : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-              }`}
-            >
-              <ClockIcon className="w-5 h-5" />
-              <span>Reminders</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("account")}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === "account"
-                  ? "bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400"
-                  : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-              }`}
-            >
-              <UserIcon className="w-5 h-5" />
-              <span>Account</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setActiveTab("appearance")}
+            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+              activeTab === "appearance"
+                ? "bg-indigo-50/70 text-accent dark:bg-gray-800"
+                : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+            }`}
+          >
+            <PaintIcon className="w-4.5 h-4.5" />
+            <span>Appearance</span>
+          </button>
         </div>
 
-        {/* Right Column: Settings Cards Blocks */}
-        <div className="md:col-span-3 space-y-6">
-          
-          {/* 1. GENERAL TAB PANELS */}
-          {activeTab === "general" && (
-            <>
-              {/* Appearance Panel */}
-              <div className="bg-white dark:bg-gray-800 border border-[#f3f0f7] dark:border-gray-700 rounded-2xl p-4.5 sm:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.015)] space-y-5">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Appearance</h2>
-                  <p className="text-sm text-gray-400 dark:text-gray-500">Choose your preferred theme</p>
-                </div>
-                
-                <div className="flex bg-gray-50 dark:bg-gray-900 border border-[#f3f0f7] dark:border-gray-850 p-1.5 rounded-2xl w-fit">
+        <div className="px-4">
+          <button
+            onClick={handleLogoutClick}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
+          >
+            <LogoutIcon className="w-4.5 h-4.5 text-red-500" />
+            <span>Log out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* ── 2. SETTINGS CONTENT PANEL ── */}
+      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50 dark:bg-[#0b0f17] select-text">
+        <div className="max-w-2xl mx-auto space-y-6">
+
+
+
+          {/* ── 2B. APPEARANCE SETTINGS (Theme/Accent/Wallpaper/Font) ── */}
+          {activeTab === "appearance" && (
+            <div className="space-y-6 animate-slide-in">
+              
+              {/* Theme Selector Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Theme</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  
+                  {/* Light theme card */}
                   <button
                     onClick={() => setTheme("light")}
-                    className={`px-4.5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                      theme === "light"
-                        ? "bg-white dark:bg-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.05)] text-purple-600 dark:text-purple-400"
-                        : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl flex flex-col items-center gap-2 cursor-pointer transition-all relative ${
+                      theme === "light" 
+                        ? "border-accent ring-1 ring-accent" 
+                        : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
                     }`}
                   >
-                    <SunIcon className="w-4 h-4" />
-                    <span>Light</span>
+                    <svg className={`w-6 h-6 ${theme === "light" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m0 13.5V21m9.75-9h-2.25M4.5 12H2.25m16.909-6.909-1.591 1.59M5.59 18.41l1.59-1.59m11.228 0 1.59 1.59m-11.228-11.23-1.59-1.59M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z" />
+                    </svg>
+                    <span className={`text-[11px] font-bold ${theme === "light" ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>Light</span>
+                    {theme === "light" && (
+                      <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                        <CheckmarkIcon className="w-2.5 h-2.5" />
+                      </span>
+                    )}
                   </button>
+
+                  {/* Dark theme card */}
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`px-4.5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                      theme === "dark"
-                        ? "bg-white dark:bg-gray-800 shadow-[0_2px_10px_rgba(0,0,0,0.05)] text-purple-600 dark:text-purple-400"
-                        : "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl flex flex-col items-center gap-2 cursor-pointer transition-all relative ${
+                      theme === "dark" 
+                        ? "border-accent ring-1 ring-accent" 
+                        : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
                     }`}
                   >
-                    <MoonIcon className="w-4 h-4" />
-                    <span>Dark</span>
+                    <svg className={`w-6 h-6 ${theme === "dark" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                    </svg>
+                    <span className={`text-[11px] font-bold ${theme === "dark" ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>Dark</span>
+                    {theme === "dark" && (
+                      <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                        <CheckmarkIcon className="w-2.5 h-2.5" />
+                      </span>
+                    )}
+                  </button>
+
+                  {/* System theme card */}
+                  <button
+                    onClick={() => setTheme("system")}
+                    className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl flex flex-col items-center gap-2 cursor-pointer transition-all relative ${
+                      theme === "system" 
+                        ? "border-accent ring-1 ring-accent" 
+                        : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <svg className={`w-6 h-6 ${theme === "system" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25M21 5.25A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
+                    </svg>
+                    <span className={`text-[11px] font-bold ${theme === "system" ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>System</span>
+                    {theme === "system" && (
+                      <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                        <CheckmarkIcon className="w-2.5 h-2.5" />
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
 
-              {/* App Installation Panel */}
-              <div className="bg-white dark:bg-gray-800 border border-[#f3f0f7] dark:border-gray-700 rounded-2xl p-4.5 sm:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.015)] space-y-5">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">App Installation</h2>
-                  <p className="text-sm text-gray-400 dark:text-gray-500">
-                    Install the application on your system for standalone operation and offline mode.
-                  </p>
+              {/* Accent Color Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Accent Color</h3>
+                <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-4.5 flex items-center gap-4.5 justify-center">
+                  {ACCENT_OPTIONS.map((opt) => {
+                    const isSelected = accentColor === opt.key
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setAccentColor(opt.key)}
+                        style={{ backgroundColor: opt.hex }}
+                        className="w-8.5 h-8.5 rounded-full flex items-center justify-center text-white transition-transform active:scale-90 hover:scale-105 shadow-sm relative cursor-pointer"
+                        title={opt.label}
+                      >
+                        {isSelected && <CheckmarkIcon className="w-4 h-4 text-white font-bold" />}
+                      </button>
+                    )
+                  })}
                 </div>
-
-                {isInstalled ? (
-                  <div className="flex items-center gap-3.5 bg-green-50/50 dark:bg-green-950/20 border border-green-200/50 dark:border-green-900/40 rounded-2xl p-4.5">
-                    <svg className="w-5.5 h-5.5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-bold text-green-800 dark:text-green-300">Application Installed</p>
-                      <p className="text-xs text-green-600/80 dark:text-green-400/80 mt-0.5">
-                        Running My Journal App in standalone mode with full offline database access.
-                      </p>
-                    </div>
-                  </div>
-                ) : isInstallable ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-purple-50/40 dark:bg-purple-950/10 border border-purple-100 dark:border-purple-900/30 rounded-2xl p-4.5">
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-bold text-purple-800 dark:text-purple-300">Ready to Install</p>
-                      <p className="text-xs text-purple-600/80 dark:text-purple-400/80">
-                        Add a shortcut to your home screen or desktop for instant launching.
-                      </p>
-                    </div>
-                    <button
-                      onClick={install}
-                      className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-[0_4px_12px_rgba(124,58,237,0.15)] flex items-center gap-1.5 cursor-pointer whitespace-nowrap self-start sm:self-auto"
-                    >
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      <span>Install App</span>
-                    </button>
-                  </div>
-                ) : isIOS ? (
-                  <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40 rounded-2xl p-4.5 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <p className="text-sm font-bold text-amber-800 dark:text-amber-300">Install on iOS (Safari)</p>
-                    </div>
-                    <p className="text-xs text-amber-600/80 dark:text-amber-400/80 leading-relaxed">
-                      Tap the <strong className="font-semibold">Share</strong> button in Safari's menu bar and select <strong className="font-semibold">Add to Home Screen</strong> to install.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/30 border border-gray-200 dark:border-gray-700 rounded-2xl p-4.5">
-                    <svg className="w-5.5 h-5.5 text-gray-400 dark:text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <div>
-                      <p className="text-sm font-bold text-gray-700 dark:text-gray-300">Running in Browser</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-550 mt-0.5">
-                        Access this app using Google Chrome or Edge to enable desktop/home screen installation.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* 2. NOTIFICATIONS TAB PANEL */}
-          {activeTab === "notifications" && (
-            <div className="bg-white dark:bg-gray-800 border border-[#f3f0f7] dark:border-gray-700 rounded-2xl p-4.5 sm:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.015)] space-y-5">
-              <div>
-                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Push Notifications</h2>
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Receive reminders and notifications to write in your journal and keep your streak alive.
-                </p>
               </div>
 
-              {permission === 'denied' ? (
-                <div className="flex items-center gap-3.5 bg-red-50/50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/40 rounded-2xl p-4.5">
-                  <svg className="w-5.5 h-5.5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-bold text-red-800 dark:text-red-300">Notifications Blocked</p>
-                    <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-0.5 leading-relaxed">
-                      You have blocked notifications for this site. To receive notifications, click the lock icon in your browser address bar and set notifications to 'Allow'.
-                    </p>
-                  </div>
+              {/* Chat Wallpapers Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Chat Wallpaper</h3>
+                <div className="grid grid-cols-5 gap-3.5">
+                  
+                  {/* No wallpaper card */}
+                  <button
+                    onClick={() => setChatWallpaper("none")}
+                    className={`aspect-[3/4] rounded-2xl border flex flex-col items-center justify-center bg-white dark:bg-gray-800 cursor-pointer transition-all relative overflow-hidden ${
+                      chatWallpaper === "none" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <svg className="w-6 h-6 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
+                    </svg>
+                    <span className="text-[9px] font-bold text-gray-400 mt-2">No Wallpaper</span>
+                  </button>
+
+                  {/* Sunset gradient card */}
+                  <button
+                    onClick={() => setChatWallpaper("sunset")}
+                    className={`aspect-[3/4] rounded-2xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-orange-100 to-rose-100 dark:from-orange-950/20 dark:to-rose-950/20 ${
+                      chatWallpaper === "sunset" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="absolute bottom-1 right-2 text-[8px] text-orange-400 font-bold select-none">Sunset</div>
+                  </button>
+
+                  {/* Ocean gradient card */}
+                  <button
+                    onClick={() => setChatWallpaper("ocean")}
+                    className={`aspect-[3/4] rounded-2xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-sky-100 to-indigo-100 dark:from-sky-950/20 dark:to-indigo-950/20 ${
+                      chatWallpaper === "ocean" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="absolute bottom-1 right-2 text-[8px] text-blue-400 font-bold select-none">Ocean</div>
+                  </button>
+
+                  {/* Forest gradient card */}
+                  <button
+                    onClick={() => setChatWallpaper("forest")}
+                    className={`aspect-[3/4] rounded-2xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-emerald-50 to-teal-50 dark:from-emerald-950/10 dark:to-teal-950/10 ${
+                      chatWallpaper === "forest" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="absolute bottom-1 right-2 text-[8px] text-emerald-400 font-bold select-none">Forest</div>
+                  </button>
+
+                  {/* Mountain Premium Image Card */}
+                  <button
+                    onClick={() => setChatWallpaper("mountain")}
+                    style={{ backgroundImage: "url('/mountain.png')" }}
+                    className={`aspect-[3/4] rounded-2xl border cursor-pointer bg-cover bg-center transition-all relative overflow-hidden ${
+                      chatWallpaper === "mountain" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="absolute bottom-1 right-2 text-[8px] text-slate-100 font-extrabold drop-shadow select-none">Mountain</div>
+                  </button>
+
                 </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-purple-50/40 dark:bg-purple-950/10 border border-purple-100 dark:border-purple-900/30 rounded-2xl p-4.5">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-bold text-purple-800 dark:text-purple-300">
-                      {permission === 'granted' && isSubscribed ? 'Notifications Enabled' : 'Enable System Reminders'}
-                    </p>
-                    <p className="text-xs text-purple-600/80 dark:text-purple-400/80">
-                      {permission === 'granted' && isSubscribed 
-                        ? 'Your device is registered to receive push notifications.' 
-                        : 'Subscribe to start receiving real-time reminders.'}
-                    </p>
+              </div>
+
+              {/* Font Size Section */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Font Size</h3>
+                
+                <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-6 space-y-4">
+                  <div className="flex items-center justify-between text-gray-400 select-none">
+                    <span className="text-xs font-medium">A</span>
+                    <span className="text-xs font-bold text-accent">{fontSizeLabel}</span>
+                    <span className="text-lg font-bold">A</span>
                   </div>
                   
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {permission === 'granted' && isSubscribed && (
+                  {/* Custom Font Slider */}
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="1"
+                    value={fontSize === "small" ? "1" : fontSize === "large" ? "3" : "2"}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setFontSize(val === "1" ? "small" : val === "3" ? "large" : "medium")
+                    }}
+                    className="w-full h-1 bg-gray-150 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer accent-accent"
+                  />
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ── 2C. NOTIFICATIONS TAB ── */}
+          {activeTab === "notifications" && (
+            <div className="space-y-5 animate-slide-in">
+              <h2 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Push Notifications</h2>
+              
+              <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-5 text-left space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">Push permission settings</p>
+                  <p className="text-[10px] text-gray-400">Receive desktop alert notifications when messages arrive.</p>
+                </div>
+
+                {permission === 'denied' ? (
+                  <div className="p-4 rounded-2xl bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-905 text-xs text-red-600 leading-relaxed font-semibold">
+                    Notifications are blocked by your browser settings. To enable them, please reset permissions in your browser's site settings.
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={handleToggleNotifications}
+                      disabled={pushLoading}
+                      className="bg-accent hover:bg-accent/90 text-white font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      {pushLoading ? "Processing..." : isSubscribed ? "Disable Push Alerts" : "Enable Push Alerts"}
+                    </button>
+
+                    {isSubscribed && permission === 'granted' && (
                       <button
                         onClick={handleSendTestPush}
                         disabled={pushLoading}
-                        className="bg-white dark:bg-gray-700 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-gray-600 border border-purple-200 dark:border-gray-600 px-4 py-2 rounded-xl text-sm font-bold transition-colors disabled:opacity-60 cursor-pointer whitespace-nowrap"
+                        className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-850 text-gray-700 dark:text-gray-300 font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
                       >
                         Send Test Push
                       </button>
                     )}
-                    <button
-                      onClick={handleToggleNotifications}
-                      disabled={pushLoading}
-                      className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-[0_4px_12px_rgba(124,58,237,0.15)] disabled:opacity-65 cursor-pointer whitespace-nowrap"
-                    >
-                      {pushLoading ? 'Processing...' : (permission === 'granted' && isSubscribed ? 'Disable' : 'Enable')}
-                    </button>
                   </div>
-                </div>
-              )}
+                )}
 
-              {pushError && (
-                <p className="text-red-500 text-sm font-semibold">{pushError}</p>
-              )}
-              {pushSuccess && (
-                <p className="text-green-600 dark:text-green-400 text-sm font-semibold">{pushSuccess}</p>
-              )}
-            </div>
-          )}
-
-          {/* 3. REMINDERS TAB PANEL */}
-          {activeTab === "reminders" && (
-            <form
-              onSubmit={handleSaveReminder}
-              className="bg-white dark:bg-gray-800 border border-[#f3f0f7] dark:border-gray-700 rounded-2xl p-4.5 sm:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.015)] space-y-5"
-            >
-              <div>
-                <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">Daily Reminders</h2>
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  Schedule a daily alert to prompt you to write. Helps build your journaling habit.
-                </p>
+                {pushError && <p className="text-red-500 text-xs font-semibold">{pushError}</p>}
+                {pushSuccess && <p className="text-green-500 text-xs font-semibold">{pushSuccess}</p>}
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-purple-50/40 dark:bg-purple-950/10 border border-purple-100 dark:border-purple-900/30 rounded-2xl p-4.5">
-                <div className="flex items-center gap-3 select-none">
+              {/* Reminders section inside notifications */}
+              <h2 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none mt-6">Daily Reminders</h2>
+              
+              <form onSubmit={handleSaveReminder} className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-5 text-left space-y-4">
+                
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <p className="text-xs font-bold text-gray-900 dark:text-white">Enable Reminders</p>
+                    <p className="text-[10px] text-gray-400">Receive a daily scheduled push alert.</p>
+                  </div>
                   <input
-                    id="reminder-toggle"
                     type="checkbox"
                     checked={reminderEnabled}
                     onChange={(e) => setReminderEnabled(e.target.checked)}
-                    className="w-4.5 h-4.5 text-purple-600 border-[#c6bfe0] dark:border-gray-600 rounded-lg focus:ring-purple-500 dark:bg-gray-700 cursor-pointer"
+                    className="w-4.5 h-4.5 text-accent border-gray-300 rounded focus:ring-accent"
                   />
-                  <label htmlFor="reminder-toggle" className="text-sm font-bold text-purple-800 dark:text-purple-300 cursor-pointer">
-                    Enable Daily Reminders
-                  </label>
                 </div>
 
-                <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-                  <span className="hidden md:inline-block text-sm font-bold text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 px-3 py-2 border border-[#f3f0f7] dark:border-gray-700 rounded-xl">
-                    {formatReminderTimeDisplay(reminderTime)}
-                  </span>
-                  <input
-                    type="time"
-                    value={reminderTime}
-                    disabled={!reminderEnabled}
-                    onChange={(e) => setReminderTime(e.target.value)}
-                    className="px-3.5 py-2 border border-[#e2def0] dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 disabled:opacity-50 transition-opacity"
-                  />
-                  <button
-                    type="submit"
-                    disabled={reminderLoading}
-                    className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-[0_4px_12px_rgba(124,58,237,0.15)] disabled:opacity-60 cursor-pointer whitespace-nowrap"
-                  >
-                    {reminderLoading ? 'Saving...' : 'Edit'}
-                  </button>
-                </div>
-              </div>
+                {reminderEnabled && (
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="time"
+                      value={reminderTime}
+                      onChange={(e) => setReminderTime(e.target.value)}
+                      className="px-3.5 py-2 border border-gray-150 dark:border-gray-800 dark:bg-gray-800 text-gray-950 dark:text-white rounded-xl text-xs focus:outline-none focus:ring-1.5 focus:ring-accent"
+                    />
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                      Detected Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
+                    </span>
+                  </div>
+                )}
 
-              {/* Detected timezone */}
-              <div className="flex justify-between items-center text-xs text-gray-400 dark:text-gray-500">
-                <span>Timezone: <strong className="font-bold text-gray-500 dark:text-gray-400">{Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}</strong></span>
-              </div>
+                <button
+                  type="submit"
+                  disabled={reminderLoading}
+                  className="bg-accent hover:bg-accent/90 text-white font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  {reminderLoading ? "Saving..." : "Save Reminder"}
+                </button>
 
-              {(!isSubscribed || permission !== 'granted') && (
-                <div className="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40 rounded-2xl p-4 flex items-start gap-2.5">
-                  <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <p className="text-xs text-amber-600/80 dark:text-amber-400/80 leading-relaxed">
-                    Note: Please enable **Push Notifications** under the Notifications tab so your device is registered to receive these scheduled alerts.
-                  </p>
-                </div>
-              )}
-
-              {reminderError && (
-                <p className="text-red-500 text-sm font-semibold">{reminderError}</p>
-              )}
-              {reminderSuccess && (
-                <p className="text-green-600 dark:text-green-400 text-sm font-semibold">{reminderSuccess}</p>
-              )}
-            </form>
+                {reminderError && <p className="text-red-500 text-xs font-semibold">{reminderError}</p>}
+                {reminderSuccess && <p className="text-green-500 text-xs font-semibold">{reminderSuccess}</p>}
+              </form>
+            </div>
           )}
 
-          {/* 4. ACCOUNT TAB PANEL */}
+          {/* ── 2D. ACCOUNT SECURITY TAB ── */}
           {activeTab === "account" && (
-            <form
-              onSubmit={handleDeleteAccount}
-              className="bg-white dark:bg-gray-800 border border-red-100 dark:border-red-950 rounded-2xl p-4.5 sm:p-6 shadow-[0_2px_10px_rgba(0,0,0,0.015)] space-y-5"
-            >
-              <div>
-                <h2 className="text-lg font-bold text-red-600 dark:text-red-400">Delete Account</h2>
-                <p className="text-sm text-gray-400 dark:text-gray-500">
-                  This removes your account and all journals linked to it. This action is permanent.
-                </p>
-              </div>
+            <div className="space-y-5 animate-slide-in">
+              <h2 className="text-sm font-extrabold text-red-500 uppercase tracking-widest text-left select-none">Delete Account</h2>
+              
+              <form onSubmit={handleDeleteAccount} className="bg-white dark:bg-gray-900 border border-red-100 dark:border-red-950/40 rounded-3xl p-5 text-left space-y-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-red-600 dark:text-red-400">Danger Zone Action</p>
+                  <p className="text-[10px] text-gray-400">This will permanently delete your account, credentials, and message history. This cannot be undone.</p>
+                </div>
 
-              <div className="max-w-sm space-y-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Confirm Password</label>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase">Confirm Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter password to confirm"
-                    className="px-4 py-2.5 border border-[#e2def0] dark:border-gray-600 dark:bg-gray-750 dark:text-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition-all"
+                    className="w-full max-w-sm px-4 py-2.5 border border-gray-150 dark:border-gray-800 dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl text-xs focus:outline-none focus:ring-1.5 focus:ring-red-400"
                   />
                 </div>
-              </div>
 
-              {deleteError && (
-                <p className="text-red-500 text-sm font-semibold">{deleteError}</p>
-              )}
+                {deleteError && <p className="text-red-500 text-xs font-semibold">{deleteError}</p>}
 
-              <button
-                type="submit"
-                disabled={isDeleting}
-                className="w-full sm:w-auto bg-white dark:bg-gray-800 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 border border-red-200 dark:border-red-900 rounded-xl px-5 py-2.5 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-                <span>{isDeleting ? "Deleting..." : "Delete Account"}</span>
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  disabled={isDeleting || !password}
+                  className="bg-red-550 hover:bg-red-600 text-white font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors cursor-pointer bg-red-600"
+                >
+                  {isDeleting ? "Deleting..." : "Permanently Delete"}
+                </button>
+              </form>
+            </div>
           )}
 
+
         </div>
-      </div>
+      </main>
+
     </div>
   )
 }
