@@ -1,6 +1,5 @@
 import 'dotenv/config'
 import connectDb from './config/db.js'
-import { initScheduler } from './services/cronService.js'
 
 const PORT = process.env.PORT || 3000
 
@@ -10,9 +9,6 @@ async function startServer() {
 
     // 2. Dynamically import app so that mongoose.connection is fully populated
     const { default: app } = await import('./app.js')
-
-    // Initialize the daily reminder scheduled cron service
-    initScheduler()
 
     app.listen(PORT, () => console.log(`Journal API running on http://localhost:${PORT}`))
 }

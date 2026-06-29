@@ -2,7 +2,6 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import useQuote from "../hooks/useQuote"
 import { authClient } from "../services/auth-client"
 
 function LoginPage() {
@@ -10,7 +9,6 @@ function LoginPage() {
   const [authError, setAuthError] = useState("")
   const { signup, login } = useAuth()
   const navigate = useNavigate()
-  const { quote, loading } = useQuote()
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm()
 
@@ -23,7 +21,7 @@ function LoginPage() {
         await login(data.email, data.password)
       }
       reset()
-      navigate("/journals")
+      navigate("/")
     } catch (err) {
       setAuthError(err.message)
     }
@@ -33,7 +31,7 @@ function LoginPage() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: `${window.location.origin}/journals`
+        callbackURL: `${window.location.origin}/`
       })
     } catch (err) {
       setAuthError(err.message || "Failed to login with Google")
@@ -50,13 +48,6 @@ function LoginPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
           {isSignup ? "Sign up to get started" : "Sign in to your account"}
         </p>
-
-        {!loading && quote && (
-          <div className="mb-6 border-l-2 border-purple-400 pl-3">
-            <p className="text-xs italic text-gray-500 dark:text-gray-400">"{quote.quote}"</p>
-            <p className="text-xs text-purple-500 mt-1">— {quote.author}</p>
-          </div>
-        )}
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">

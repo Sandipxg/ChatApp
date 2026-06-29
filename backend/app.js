@@ -10,8 +10,8 @@ import { toNodeHandler } from 'better-auth/node'
 import { auth } from './config/auth.js'
 import * as authController from './controllers/authController.js'
 import authMiddleware from './middleware/auth.js'
-import journalRoutes from './routes/journals.js'
 import pushRoutes from './routes/push.js'
+import chatRoutes from './routes/chat.js'
 import { notFound, errorHandler } from './middleware/errorHandler.js'
 
 // Since swagger.json is a JSON file, using createRequire is the standard ESM way to import JSON
@@ -79,8 +79,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 app.use(express.json())
 app.use(cookieParser())
 
-app.use('/api/journals', journalRoutes)
 app.use('/api/push', pushRoutes)
+app.use('/api/chat', chatRoutes)
 
 app.use(notFound)
 app.use(errorHandler)

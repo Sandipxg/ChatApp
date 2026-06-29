@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, NavLink, useNavigate } from "react-router-dom"
+import { BrowserRouter, Routes, Route, Link, NavLink, useNavigate, useLocation } from "react-router-dom"
 import { useContext, useState, lazy, Suspense } from "react"
 import { ThemeProvider } from "./context/ThemeContext"
 import ThemeContext from "./context/ThemeContext"
@@ -8,9 +8,7 @@ import { InstallProvider, useInstall } from './context/InstallContext'
 import ProtectedRoute from "./components/ProtectedRoute"
 import ErrorBoundary from "./components/ErrorBoundary"
 
-const HomePage = lazy(() => import("./pages/Homepage"))
-const JournalPage = lazy(() => import("./pages/Journalpage"))
-const JournalDetailPage = lazy(() => import("./pages/JournalDetailPage"))
+const ChatPage = lazy(() => import("./pages/ChatPage"))
 const SettingsPage = lazy(() => import("./pages/Settingpage"))
 const LoginPage = lazy(() => import("./pages/Loginpage"))
 
@@ -101,7 +99,10 @@ function AppLayout() {
   const { currentUser, logout } = useAuth()
   const { isInstallable, isInstalled, install } = useInstall()
   const navigate = useNavigate()
+  const location = useLocation()
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  const isChatRoute = location.pathname === "/" && currentUser
 
   function handleLogout() {
     logout()
@@ -134,6 +135,7 @@ function AppLayout() {
       <div className="min-h-screen bg-[#fdfcff] dark:bg-gray-900 text-gray-800 dark:text-gray-100 flex flex-col">
 
         {/* ── Top Header Navigation Bar ── */}
+        {!isChatRoute && (
         <nav className="bg-white dark:bg-gray-800 border-b border-[#f3f0f7] dark:border-gray-700 sticky top-0 z-40 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.03)]">
           <div className="max-w-6xl mx-auto px-4 md:px-6 flex items-center h-16 justify-between">
             
@@ -142,18 +144,16 @@ function AppLayout() {
               {/* Brand Logo */}
               <Link to="/" className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold text-lg select-none">
                 <FeatherIcon className="w-5 h-5" />
-                <span>My Journal</span>
+                <span>Chat App</span>
               </Link>
 
               {/* Desktop Nav Tabs */}
               <div className="hidden md:flex items-center gap-6 h-16">
                 <NavLink to="/" end className={desktopNavLinkClass}>
-                  <PostsIcon className="w-4 h-4" />
-                  <span>Posts</span>
-                </NavLink>
-                <NavLink to="/journals" className={desktopNavLinkClass}>
-                  <JournalIcon className="w-4 h-4" />
-                  <span>Journals</span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <span>Chat</span>
                 </NavLink>
                 <NavLink to="/settings" className={desktopNavLinkClass}>
                   <SettingsIcon className="w-4 h-4" />
@@ -242,18 +242,15 @@ function AppLayout() {
 
           </div>
         </nav>
+        )}
 
         {/* ── Main Content Container ── */}
-        <main className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10 pb-24 md:pb-12 flex-1 w-full relative">
+        <main className={isChatRoute ? "flex-1 w-full relative overflow-hidden" : "max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-10 pb-24 md:pb-12 flex-1 w-full relative"}>
           <ErrorBoundary>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/journals" element={
-                  <ProtectedRoute><JournalPage /></ProtectedRoute>
-                } />
-                <Route path="/journals/:id" element={
-                  <ProtectedRoute><JournalDetailPage /></ProtectedRoute>
+                <Route path="/" element={
+                  <ProtectedRoute><ChatPage /></ProtectedRoute>
                 } />
                 <Route path="/settings" element={
                   <ProtectedRoute><SettingsPage /></ProtectedRoute>
@@ -265,21 +262,15 @@ function AppLayout() {
         </main>
 
         {/* ── Mobile Bottom Navigation Bar — hidden on md+ ── */}
-        {currentUser && (
+        {!isChatRoute && currentUser && (
           <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-t border-[#f3f0f7] dark:border-gray-700 flex md:hidden justify-around py-2.5 shadow-[0_-5px_15px_rgba(0,0,0,0.03)]">
             <NavLink to="/" end className={navLinkClass}>
               {({ isActive }) => (
                 <>
-                  <PostsIcon className={`w-5.5 h-5.5 transition-transform active:scale-90 ${isActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400"}`} />
-                  <span>Posts</span>
-                </>
-              )}
-            </NavLink>
-            <NavLink to="/journals" className={navLinkClass}>
-              {({ isActive }) => (
-                <>
-                  <JournalIcon className={`w-5.5 h-5.5 transition-transform active:scale-90 ${isActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400"}`} />
-                  <span>Journals</span>
+                  <svg className={`w-5.5 h-5.5 transition-transform active:scale-90 ${isActive ? "text-purple-600 dark:text-purple-400" : "text-gray-500 dark:text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <span>Chat</span>
                 </>
               )}
             </NavLink>

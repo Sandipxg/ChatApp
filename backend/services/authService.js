@@ -1,6 +1,6 @@
 import { auth } from '../config/auth.js'
 import * as userModel from '../models/userModel.js'
-import * as journalModel from '../models/journalModel.js'
+import { Message } from '../models/messageModel.js'
 import AppError from '../utils/AppError.js'
 
 export async function deleteAccount(userId, password, headers) {
@@ -18,7 +18,12 @@ export async function deleteAccount(userId, password, headers) {
   }
 
   await userModel.removeById(userId)
-  await journalModel.removeByUser(userId)
+  await Message.deleteMany({
+    $or: [
+      { senderId: userId },
+      { receiverId: userId }
+    ]
+  })
 
   return { message: 'Account deleted' }
 }
