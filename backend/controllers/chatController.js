@@ -15,7 +15,7 @@ export async function getContacts(req, res, next) {
       name: user.name || '',
       email: user.email,
       image: user.image,
-      username: user.username,
+      username: user.username || user.name || 'User',
     }))
 
     res.json(clientContacts)
@@ -61,7 +61,7 @@ export async function getChatPartners(req, res, next) {
         name: user.name || '',
         email: user.email,
         image: user.image,
-        username: user.username,
+        username: user.username || user.name || 'User',
         latestMessage: latestMsg
           ? {
               id: latestMsg._id.toString(),

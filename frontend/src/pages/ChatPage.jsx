@@ -290,33 +290,43 @@ export default function ChatPage() {
         selectedPartner ? 'hidden md:flex' : 'flex'
       }`}>
         
-        {/* Chats title row */}
-        <div className="p-4 flex items-center justify-between select-none">
-          <h2 className="text-xl font-extrabold text-gray-900 dark:text-white">
-            Messages
-          </h2>
+        {/* Chats title row + search */}
+        <div className="px-4 pt-5 pb-3 space-y-3 select-none">
+          <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">Messages</h2>
+          <div className="relative">
+            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search conversations..."
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800/60 border border-gray-200/60 dark:border-gray-700/50 rounded-full text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 focus:bg-white dark:focus:bg-gray-800 transition-all select-text"
+            />
+          </div>
         </div>
 
 
 
         {/* Sidebar Sections Tab bar */}
-        <div className="px-4 pb-2.5 flex items-center gap-4 select-none text-xs font-semibold border-b border-gray-100 dark:border-gray-800/80 mb-2">
+        <div className="px-4 flex items-center gap-2 select-none border-b border-gray-100 dark:border-gray-800/80 mb-2">
           <button
             onClick={() => setActiveTab('chats')}
-            className={`pb-1.5 relative cursor-pointer font-extrabold transition-all text-xs ${
+            className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm ${
               activeTab === 'chats'
                 ? 'text-accent border-b-2 border-accent'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             Partners
           </button>
           <button
             onClick={() => setActiveTab('contacts')}
-            className={`pb-1.5 relative cursor-pointer font-extrabold transition-all text-xs ${
+            className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm ${
               activeTab === 'contacts'
                 ? 'text-accent border-b-2 border-accent'
-                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
           >
             Contacts
@@ -346,45 +356,39 @@ export default function ChatPage() {
                   <div
                     key={partner.id}
                     onClick={() => handleSelectPartner(partner)}
-                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-150 ${
+                    className={`flex items-center gap-3.5 p-3.5 rounded-3xl cursor-pointer transition-all duration-150 relative overflow-hidden ${
                       isSelected
-                        ? 'bg-indigo-50/70 dark:bg-gray-800 text-gray-900 dark:text-white border border-indigo-100/50 dark:border-gray-700/50'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-850/60 text-gray-700 dark:text-gray-300'
+                        ? 'bg-accent/8 dark:bg-accent/10 sidebar-item-active'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                   >
                     <div className="relative flex-shrink-0">
                       {partner.image ? (
-                        <img src={partner.image} alt={partner.username} className="w-10 h-10 rounded-full object-cover bg-gray-100 border border-gray-200/50 dark:border-gray-800" />
+                        <img src={partner.image} alt={partner.username} className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-900 shadow-sm" />
                       ) : (
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${getAvatarBg(partner.id)}`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base shadow-sm ${getAvatarBg(partner.id)}`}>
                           {partner.isGroup ? '👥' : getInitials(partner.username)}
                         </div>
-                      )}
-                      
-                      {partner.status === 'Online' && (
-                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-900"></span>
                       )}
                     </div>
 
                     <div className="flex-1 min-w-0 text-left">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-gray-900 dark:text-white truncate max-w-[140px]">{partner.username}</span>
+                        <span className={`text-sm font-bold truncate max-w-[150px] ${isSelected ? 'text-accent' : 'text-gray-900 dark:text-white'}`}>{partner.username}</span>
                         {partner.latestMessage && (
-                          <span className="text-[10px] text-gray-400 font-medium select-none">
+                          <span className="text-[11px] text-gray-400 font-medium select-none flex-shrink-0 ml-1">
                             {partner.latestMessage.createdAt.includes('T') ? formatTime(partner.latestMessage.createdAt) : partner.latestMessage.createdAt}
                           </span>
                         )}
                       </div>
-                      
-                      <div className="flex items-center justify-between mt-0.5">
-                        <p className={`text-xs truncate max-w-[170px] ${
-                          partner.unreadCount > 0 ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-400 dark:text-gray-500'
+                      <div className="flex items-center justify-between mt-1">
+                        <p className={`text-xs truncate max-w-[160px] ${
+                          partner.unreadCount > 0 ? 'text-gray-700 dark:text-gray-200 font-semibold' : 'text-gray-400 dark:text-gray-500'
                         }`}>
-                          {partner.latestMessage ? partner.latestMessage.text : 'Start chatting'}
+                          {partner.latestMessage ? partner.latestMessage.text : 'Start a conversation'}
                         </p>
-                        
                         {partner.unreadCount > 0 && (
-                          <span className="flex-shrink-0 w-4.5 h-4.5 rounded-full bg-emerald-500 text-[10px] font-extrabold text-white flex items-center justify-center shadow-sm select-none">
+                          <span className="flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-[10px] font-extrabold text-white flex items-center justify-center shadow-sm select-none">
                             {partner.unreadCount}
                           </span>
                         )}
@@ -407,25 +411,24 @@ export default function ChatPage() {
                   <div
                     key={contact.id}
                     onClick={() => handleSelectPartner(contact)}
-                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-150 ${
+                    className={`flex items-center gap-3.5 p-3.5 rounded-3xl cursor-pointer transition-all duration-150 relative ${
                       isSelected
-                        ? 'bg-indigo-50/70 dark:bg-gray-800 text-gray-900 dark:text-white border border-indigo-100/50 dark:border-gray-700/50'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-850/60 text-gray-700 dark:text-gray-300'
+                        ? 'bg-accent/8 dark:bg-accent/10 sidebar-item-active'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
                     }`}
                   >
                     <div className="relative flex-shrink-0">
                       {contact.image ? (
-                        <img src={contact.image} alt={contact.username} className="w-10 h-10 rounded-full object-cover bg-gray-100 border border-gray-200/50" />
+                        <img src={contact.image} alt={contact.username} className="w-12 h-12 rounded-full object-cover border-2 border-white dark:border-gray-900 shadow-sm" />
                       ) : (
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${getAvatarBg(contact.id)}`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base ${getAvatarBg(contact.id)}`}>
                           {getInitials(contact.username)}
                         </div>
                       )}
                     </div>
-                    
                     <div className="text-left flex-1 min-w-0">
-                      <span className="text-xs font-bold text-gray-900 dark:text-white truncate block">{contact.username}</span>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate block mt-0.5">{contact.email}</span>
+                      <span className={`text-sm font-bold truncate block ${isSelected ? 'text-accent' : 'text-gray-900 dark:text-white'}`}>{contact.username}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 truncate block mt-0.5">{contact.email}</span>
                     </div>
                   </div>
                 )
@@ -443,43 +446,36 @@ export default function ChatPage() {
         {selectedPartner ? (
           // ACTIVE CONVERSATION WINDOW
           <>
-            {/* Header info */}
-            <div className="h-[64px] px-6 bg-white dark:bg-gray-900 border-b border-gray-150 dark:border-gray-800 flex items-center justify-between flex-shrink-0 select-none z-10">
-              <div className="flex items-center gap-3">
+            {/* Chat Window Header — glassmorphic */}
+            <div className="h-[72px] px-6 glass border-b border-gray-200/50 dark:border-gray-800/60 flex items-center flex-shrink-0 select-none z-10">
+              <div className="flex items-center gap-4 w-full">
                 {/* Back link on Mobile */}
                 <button
                   onClick={() => setSelectedPartner(null)}
-                  className="md:hidden mr-1 p-1.5 rounded-xl text-gray-400 hover:text-gray-800 hover:bg-gray-50 transition-colors cursor-pointer"
+                  className="md:hidden mr-1 p-2 rounded-2xl text-gray-400 hover:text-gray-800 hover:bg-gray-100/80 transition-colors cursor-pointer"
                   title="Back to Conversations"
                 >
-                  <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
                   </svg>
                 </button>
 
-                {/* Avatar with online bubble */}
+                {/* Avatar */}
                 <div className="relative flex-shrink-0">
                   {selectedPartner.image ? (
-                    <img src={selectedPartner.image} alt={selectedPartner.username} className="w-9.5 h-9.5 rounded-full object-cover border border-gray-100" />
+                    <img src={selectedPartner.image} alt={selectedPartner.username} className="w-11 h-11 rounded-full object-cover ring-2 ring-white dark:ring-gray-900" />
                   ) : (
-                    <div className={`w-9.5 h-9.5 rounded-full flex items-center justify-center font-bold text-white text-xs ${getAvatarBg(selectedPartner.id)}`}>
+                    <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-base ${getAvatarBg(selectedPartner.id)}`}>
                       {selectedPartner.isGroup ? '👥' : getInitials(selectedPartner.username)}
                     </div>
                   )}
-                  {selectedPartner.status === 'Online' && (
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-white dark:border-gray-900"></span>
-                  )}
                 </div>
 
-                <div className="text-left leading-tight">
-                  <h3 className="text-xs font-bold text-gray-900 dark:text-white truncate max-w-[180px]">{selectedPartner.username}</h3>
-                  <span className="text-[10px] text-emerald-500 dark:text-emerald-400 font-bold select-none">
-                    {selectedPartner.status || 'Online'}
-                  </span>
+                <div className="text-left leading-tight flex-1 min-w-0">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white truncate">{selectedPartner.username}</h3>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{selectedPartner.email}</p>
                 </div>
               </div>
-
-
             </div>
 
             {/* MESSAGE FEED PANE (Wallpaper Applied) */}
@@ -491,9 +487,14 @@ export default function ChatPage() {
                 </div>
               ) : messages.length === 0 ? (
                 <div className="h-full flex items-center justify-center">
-                  <div className="text-center p-6 bg-white/40 dark:bg-slate-900/30 backdrop-blur-sm rounded-3xl border border-gray-150 dark:border-slate-800/30 max-w-xs shadow-sm">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">No messages yet.</p>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">Send a message to begin talking bright!</p>
+                  <div className="text-center p-8 bg-white/50 dark:bg-slate-900/40 backdrop-blur-sm rounded-3xl border border-gray-200/40 dark:border-slate-800/30 max-w-xs shadow-sm">
+                    <div className="w-12 h-12 rounded-2xl bg-accent/10 dark:bg-accent/15 flex items-center justify-center mx-auto mb-3">
+                      <svg className="w-6 h-6 text-accent/60" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-bold text-gray-600 dark:text-gray-300">No messages yet</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5 leading-relaxed">Say hello and start the conversation!</p>
                   </div>
                 </div>
               ) : (
@@ -502,7 +503,7 @@ export default function ChatPage() {
                   return (
                     <div
                       key={msg._id || msg.id}
-                      className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} animate-slide-in`}
+                      className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} animate-bubble`}
                     >
                       {/* Group sender names indicator */}
                       {!isOwnMessage && selectedPartner.isGroup && msg.senderName && (
@@ -511,10 +512,10 @@ export default function ChatPage() {
                         </span>
                       )}
 
-                      <div className={`max-w-[70%] rounded-2xl px-4 py-2.5 shadow-sm leading-relaxed text-sm ${
+                      <div className={`max-w-[70%] rounded-3xl px-5 py-3 leading-relaxed text-sm ${
                         isOwnMessage
-                          ? 'bg-gradient-to-br from-accent to-[var(--color-accent-hover)] text-white rounded-tr-none'
-                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-tl-none border border-gray-150/40 dark:border-gray-700/50'
+                          ? 'bg-gradient-to-br from-accent to-indigo-600 text-white rounded-br-sm bubble-own'
+                          : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-white rounded-bl-sm border border-gray-200/50 dark:border-gray-700/40 shadow-sm'
                       }`}>
                         <p className="text-left break-words whitespace-pre-wrap select-text">
                           {msg.text}
@@ -522,10 +523,10 @@ export default function ChatPage() {
                       </div>
 
                       {/* Msg Details (time + ticks status) */}
-                      <div className="flex items-center gap-1 mt-1 px-1 text-[10px] text-gray-400 dark:text-gray-500 font-semibold select-none">
+                      <div className="flex items-center gap-1 mt-1 px-1 text-xs text-gray-400 dark:text-gray-500 select-none">
                         <span>{formatTime(msg.createdAt)}</span>
                         {isOwnMessage && (
-                          <span className="text-accent flex items-center font-bold">
+                          <span className="text-accent/80 flex items-center">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                             </svg>
@@ -539,56 +540,34 @@ export default function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* MESSAGE INPUT CONTAINER */}
-            <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-150 dark:border-gray-800 flex-shrink-0 select-none z-10">
+            {/* MESSAGE INPUT CONTAINER — floating pill */}
+            <div className="px-4 py-4 md:px-6 bg-white/90 dark:bg-gray-900/95 border-t border-gray-200/50 dark:border-gray-800/70 flex-shrink-0 select-none z-10 backdrop-blur-sm">
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend() }}
                 className="flex items-center gap-3"
               >
-                {/* Paperclip attachment icon button */}
-                <button
-                  type="button"
-                  className="w-11 h-11 flex items-center justify-center rounded-2xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all cursor-pointer border border-gray-150/50 dark:border-gray-800"
-                  title="Add attachments"
-                >
-                  <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                </button>
-
                 {/* Input block */}
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type your message..."
-                  className="flex-1 bg-gray-50 dark:bg-gray-850 border border-gray-150 dark:border-gray-800 focus:border-accent focus:bg-white dark:focus:bg-gray-800 focus:outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-2xl px-5 py-3 transition-all select-text"
+                  placeholder="Type a message..."
+                  className="flex-1 bg-gray-50 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700/60 focus:border-accent/50 focus:bg-white dark:focus:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-accent/20 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 rounded-full px-6 py-3.5 transition-all select-text"
                 />
 
-                {/* Microphone / Voice note icon button */}
-                <button
-                  type="button"
-                  className="w-11 h-11 flex items-center justify-center rounded-2xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-all cursor-pointer border border-gray-150/50 dark:border-gray-800"
-                  title="Voice Message"
-                >
-                  <svg className="w-5.5 h-5.5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-                  </svg>
-                </button>
-
-                {/* Send Button */}
+                {/* Send Button — accent glow */}
                 <button
                   type="submit"
                   disabled={!inputText.trim()}
-                  className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white transition-all shadow-md active:scale-95 ${
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-all active:scale-95 flex-shrink-0 ${
                     inputText.trim()
-                      ? 'bg-accent hover:bg-accent/90 hover:shadow-lg cursor-pointer'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed border border-gray-150/30 dark:border-gray-800/35'
+                      ? 'bg-gradient-to-br from-accent to-indigo-600 shadow-lg shadow-accent/35 hover:shadow-accent/50 animate-glow cursor-pointer'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
                   }`}
                   title="Send Message"
                 >
-                  <svg className="w-5.5 h-5.5 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
                   </svg>
                 </button>
@@ -596,31 +575,34 @@ export default function ChatPage() {
             </div>
           </>
         ) : (
-          // EMPTY CHAT HOMEPAGE VIEW (Welcome to Yappy screen)
-          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-[#0b0f17] select-none">
+          // EMPTY CHAT HOMEPAGE VIEW
+          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 dark:bg-[#0d1117] select-none">
             
-            {/* Pulsing graphic wrapper */}
-            <div className="w-24 h-24 rounded-[28px] bg-gradient-to-tr from-cyan-400 via-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-100 dark:shadow-none mb-6 animate-pulse select-none">
-              <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
-              </svg>
+            {/* Animated logo icon */}
+            <div className="relative mb-8">
+              <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-accent via-indigo-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-accent/30">
+                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 9.75a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375m-13.5 3.01c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                </svg>
+              </div>
+              {/* Floating orbs */}
+              <div className="absolute -top-2 -right-2 w-5 h-5 bg-emerald-400 rounded-full opacity-80 animate-bounce" style={{animationDelay: '0.1s'}}></div>
+              <div className="absolute -bottom-1 -left-2 w-3 h-3 bg-pink-400 rounded-full opacity-70 animate-bounce" style={{animationDelay: '0.4s'}}></div>
             </div>
 
-            <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-2 tracking-tight">
-              Welcome to <span className="text-accent bg-accent/5 px-2.5 py-1 rounded-xl">ChatApp</span>
+            <h3 className="text-2xl font-extrabold text-gray-900 dark:text-white mb-3 tracking-tight">
+              Welcome to <span className="bg-gradient-to-r from-accent to-indigo-500 bg-clip-text text-transparent">ChatApp</span>
             </h3>
             
-            <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[260px] text-center leading-relaxed font-medium">
-              Pick a conversation and let the tiny internet confetti begin.
+            <p className="text-sm text-gray-400 dark:text-gray-500 max-w-[240px] text-center leading-relaxed">
+              Select a conversation from the sidebar to start messaging.
             </p>
 
-            {/* Flying plane line graphic */}
-            <div className="mt-14 relative w-56 h-20">
-              <svg className="w-full h-full text-gray-300 dark:text-gray-800" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" viewBox="0 0 200 80">
-                <path d="M10,50 Q60,10 110,40 T180,20" />
-                <polygon points="175,15 188,17 181,28" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeDasharray="none" />
-                <line x1="179" y1="21" x2="182" y2="25" stroke="currentColor" strokeWidth="1" strokeDasharray="none" />
-              </svg>
+            {/* Decorative dots */}
+            <div className="flex items-center gap-2 mt-10">
+              <div className="w-2 h-2 rounded-full bg-accent/40 animate-dot-1"></div>
+              <div className="w-2 h-2 rounded-full bg-accent/40 animate-dot-2"></div>
+              <div className="w-2 h-2 rounded-full bg-accent/40 animate-dot-3"></div>
             </div>
             
           </div>

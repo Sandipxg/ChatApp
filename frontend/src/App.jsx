@@ -89,9 +89,15 @@ function ChevronDownIcon({ className }) {
 
 function PageLoader() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-      <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-900 border-t-accent rounded-full animate-spin"></div>
-      <p className="text-gray-500 dark:text-gray-400 text-sm font-medium animate-pulse">Loading page...</p>
+    <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-5">
+      <div className="relative w-14 h-14">
+        <div className="absolute inset-0 rounded-full border-4 border-accent/20"></div>
+        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-accent animate-spin"></div>
+        <div className="absolute inset-2 rounded-full bg-gradient-to-br from-accent/20 to-indigo-500/10 flex items-center justify-center">
+          <LogoIcon className="w-5 h-5 text-accent" />
+        </div>
+      </div>
+      <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 tracking-wider uppercase">Loading...</p>
     </div>
   )
 }
@@ -135,8 +141,11 @@ function AppLayout() {
   const renderHeaderTitle = () => {
     if (location.pathname === "/") {
       return (
-        <div className="flex flex-col text-left">
-          <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">ChatApp</span>
+        <div className="flex items-center gap-3 text-left">
+          <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-accent to-indigo-600 flex items-center justify-center shadow-md shadow-accent/25 flex-shrink-0">
+            <LogoIcon className="w-5 h-5 text-white" />
+          </div>
+          <span className="text-xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent leading-none tracking-tight">ChatApp</span>
         </div>
       )
     }
@@ -185,7 +194,7 @@ function AppLayout() {
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
         
         {/* Global Dynamic Top Header */}
-        <header className="h-[64px] bg-white dark:bg-gray-900 border-b border-gray-150 dark:border-gray-800 flex-shrink-0 flex items-center justify-between px-6 z-30 select-none">
+        <header className="h-[72px] bg-white/90 dark:bg-gray-900/95 border-b border-gray-200/60 dark:border-gray-800/80 flex-shrink-0 flex items-center justify-between px-6 z-30 select-none backdrop-blur-sm">
           
           {/* Left: Dynamic section title */}
           <div className="flex items-center gap-3">
@@ -202,7 +211,7 @@ function AppLayout() {
             {/* Quick Settings */}
             <button
               onClick={() => navigate("/settings", { state: { activeTab: "account" } })}
-              className="p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all cursor-pointer"
+              className="p-2 text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 rounded-xl transition-all cursor-pointer"
               title="Settings"
             >
               <SettingsIcon className="w-5 h-5" />
@@ -212,42 +221,44 @@ function AppLayout() {
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 p-1.5 rounded-xl border border-gray-150 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all cursor-pointer select-none"
+                className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-all cursor-pointer select-none group"
               >
-                <div className="w-7 h-7 rounded-full bg-accent text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-accent/20 ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all">
                   {firstLetter}
                 </div>
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 hidden sm:inline max-w-[80px] truncate">
-                  {currentUser.username}
-                </span>
-                <ChevronDownIcon className="w-3.5 h-3.5 text-gray-400" />
+                <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Profile Dropdown Menu */}
               {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-800 rounded-2xl shadow-xl py-1.5 z-50 animate-slide-in text-left">
-                  <div className="px-3.5 py-2 border-b border-gray-100 dark:border-gray-800 select-text">
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider">Logged in as</p>
-                    <p className="text-xs font-bold text-gray-800 dark:text-gray-100 truncate mt-0.5">
-                      {currentUser.username}
-                    </p>
+                <div className="absolute right-0 mt-2.5 w-52 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 z-50 animate-fade-up text-left overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800/80 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-accent/20 flex-shrink-0">
+                      {firstLetter}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{currentUser.username}</p>
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium truncate mt-0.5">{currentUser.email || 'Logged in'}</p>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => { setShowUserMenu(false); navigate("/settings", { state: { activeTab: "account" } }) }}
-                    className="w-full text-left flex items-center gap-2 px-3.5 py-2.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-850 cursor-pointer"
-                  >
-                    <SettingsIcon className="w-4 h-4 text-gray-400" />
-                    <span>Settings</span>
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left flex items-center gap-2 px-3.5 py-2.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-                    </svg>
-                    <span>Logout</span>
-                  </button>
+                  <div className="py-1">
+                    <button
+                      onClick={() => { setShowUserMenu(false); navigate("/settings", { state: { activeTab: "account" } }) }}
+                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white cursor-pointer transition-colors"
+                    >
+                      <SettingsIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span>Settings</span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer transition-colors"
+                    >
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                      </svg>
+                      <span>Log out</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

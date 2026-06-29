@@ -86,34 +86,44 @@ function LoginPage() {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-6 px-4 select-none font-sans">
-      <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 shadow-[0_20px_50px_rgba(0,0,0,0.06)] rounded-[32px] overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 min-h-[580px] animate-slide-in">
+      <div className="bg-white dark:bg-gray-900 shadow-2xl shadow-black/8 dark:shadow-black/40 rounded-[32px] overflow-hidden max-w-4xl w-full grid grid-cols-1 md:grid-cols-12 min-h-[600px] animate-slide-in border border-gray-100/50 dark:border-gray-800/50">
         
-        {/* ── LEFT PANEL: YAPPY BRANDING ── */}
-        <div className="md:col-span-5 bg-gradient-to-br from-cyan-400 via-purple-500 to-indigo-600 p-8 text-white flex flex-col justify-between relative overflow-hidden">
-          {/* Subtle Decorative Background shapes */}
-          <div className="absolute top-[-10%] right-[-10%] w-48 h-48 bg-white/10 rounded-full blur-2xl"></div>
-          <div className="absolute bottom-[-10%] left-[-10%] w-60 h-60 bg-white/10 rounded-full blur-3xl"></div>
+        {/* ── LEFT PANEL: CHATAPP BRANDING ── */}
+        <div className="md:col-span-5 relative overflow-hidden p-8 text-white flex flex-col justify-between" style={{background: 'linear-gradient(135deg, #667eea 0%, #764ba2 40%, #6B73FF 100%)'}}>
+          {/* Animated mesh gradient blobs */}
+          <div className="absolute inset-0" style={{background: 'radial-gradient(ellipse at 20% 20%, rgba(255,255,255,0.15) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(99,102,241,0.3) 0%, transparent 50%)'}}></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+          <div className="absolute bottom-0 left-0 w-56 h-56 bg-indigo-900/20 rounded-full blur-2xl translate-y-1/3 -translate-x-1/3"></div>
           
-          {/* Diamonds glowing decoration */}
-          <div className="absolute top-1/4 right-8 w-3 h-3 bg-white/20 transform rotate-45 animate-pulse"></div>
-          <div className="absolute bottom-1/3 left-10 w-2.5 h-2.5 bg-white/25 transform rotate-45"></div>
-          <div className="absolute top-1/2 left-6 w-2 h-2 bg-white/30 transform rotate-45 animate-pulse delay-700"></div>
+          {/* Floating geometric shapes */}
+          <div className="absolute top-1/3 right-6 w-4 h-4 bg-white/20 transform rotate-45 animate-pulse"></div>
+          <div className="absolute bottom-1/3 left-8 w-3 h-3 bg-white/30 transform rotate-45"></div>
+          <div className="absolute top-1/2 right-12 w-2 h-2 bg-pink-300/40 rounded-full animate-pulse" style={{animationDelay:'0.5s'}}></div>
+          <div className="absolute top-1/4 left-12 w-2 h-2 bg-cyan-300/40 rounded-full animate-pulse" style={{animationDelay:'1s'}}></div>
 
-          {/* Logo & Brand text */}
+          {/* Logo & Brand */}
           <div className="z-10 text-left">
-            <YappyLogo className="mb-4" />
+            <YappyLogo className="mb-5" />
             <h2 className="text-3xl font-extrabold tracking-tight">ChatApp</h2>
-            <p className="text-white/80 text-sm mt-1.5 font-medium">Talk bright. Connect instantly.</p>
+            <p className="text-white/75 text-sm mt-2 font-medium leading-relaxed">Connect with anyone,<br/>anywhere, instantly.</p>
           </div>
 
-          {/* Paper Airplane Drawing illustration */}
-          <div className="z-10 mt-16 md:mt-0 relative h-32 flex items-end">
-            <svg className="w-full h-24 text-white/40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3" viewBox="0 0 200 80">
-              <path d="M10,65 Q70,25 130,45 Q160,55 180,30" />
-              {/* Paper airplane element */}
-              <polygon points="175,25 188,27 181,38" fill="white" stroke="white" strokeWidth="1" strokeDasharray="none" />
-              <line x1="179" y1="31" x2="182" y2="35" stroke="white" strokeWidth="1" strokeDasharray="none" />
-            </svg>
+          {/* Feature list */}
+          <div className="z-10 space-y-3">
+            {[
+              'End-to-end encrypted messages',
+              'Real-time delivery & notifications',
+              'Custom themes & wallpapers',
+            ].map((feat) => (
+              <div key={feat} className="flex items-center gap-2.5">
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                </div>
+                <span className="text-xs text-white/85 font-medium">{feat}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -133,10 +143,10 @@ function LoginPage() {
             
             {/* Full Name input (Signup only) */}
             {isSignup && (
-              <div className="flex flex-col gap-1.5 text-left">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Full name</label>
+              <div className="flex flex-col gap-2 text-left">
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider pl-1">Full name</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 pointer-events-none">
+                  <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-gray-400 pointer-events-none">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
                     </svg>
@@ -145,18 +155,18 @@ function LoginPage() {
                     {...register("fullName", { required: "Full name is required" })}
                     type="text"
                     placeholder="Enter your name"
-                    className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-150 dark:border-gray-800 text-gray-900 dark:text-white rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all"
+                    className="w-full pl-12 pr-5 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-full text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all shadow-sm"
                   />
                 </div>
-                {errors.fullName && <p className="text-red-500 text-xs mt-0.5">{errors.fullName.message}</p>}
+                {errors.fullName && <p className="text-red-500 text-xs mt-0.5 pl-1">{errors.fullName.message}</p>}
               </div>
             )}
 
             {/* Email Address input */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email address</label>
+            <div className="flex flex-col gap-2 text-left">
+              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider pl-1">Email address</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 pointer-events-none">
+                <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-gray-400 pointer-events-none">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
                   </svg>
@@ -171,17 +181,17 @@ function LoginPage() {
                   })}
                   type="text"
                   placeholder="Enter email address"
-                  className="w-full pl-11 pr-4 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-150 dark:border-gray-800 text-gray-900 dark:text-white rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all"
+                  className="w-full pl-12 pr-5 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-full text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all shadow-sm"
                 />
               </div>
-              {errors.email && <p className="text-red-500 text-xs mt-0.5">{errors.email.message}</p>}
+              {errors.email && <p className="text-red-500 text-xs mt-0.5 pl-1">{errors.email.message}</p>}
             </div>
 
             {/* Password input */}
-            <div className="flex flex-col gap-1.5 text-left">
-              <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Password</label>
+            <div className="flex flex-col gap-2 text-left">
+              <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider pl-1">Password</label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 pointer-events-none">
+                <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-gray-400 pointer-events-none">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0V10.5m-2.852 0a1.5 1.5 0 0 0-1.488 1.482l-.099 7.04A1.5 1.5 0 0 0 2.5 20.5h19a1.5 1.5 0 0 0 1.487-1.478l-.099-7.04a1.5 1.5 0 0 0-1.488-1.482H3.75Z" />
                   </svg>
@@ -193,12 +203,12 @@ function LoginPage() {
                   })}
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter password"
-                  className="w-full pl-11 pr-11 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-150 dark:border-gray-800 text-gray-900 dark:text-white rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all"
+                  className="w-full pl-12 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-full text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all shadow-sm"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute inset-y-0 right-0 pr-4.5 flex items-center text-gray-400 hover:text-gray-650 transition-colors"
                 >
                   {showPassword ? (
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -212,15 +222,15 @@ function LoginPage() {
                   )}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-xs mt-0.5">{errors.password.message}</p>}
+              {errors.password && <p className="text-red-500 text-xs mt-0.5 pl-1">{errors.password.message}</p>}
             </div>
 
             {/* Confirm Password input (Signup only) */}
             {isSignup && (
-              <div className="flex flex-col gap-1.5 text-left">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Confirm password</label>
+              <div className="flex flex-col gap-2 text-left">
+                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider pl-1">Confirm password</label>
                 <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 pointer-events-none">
+                  <span className="absolute inset-y-0 left-0 pl-4.5 flex items-center text-gray-400 pointer-events-none">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0V10.5m-2.852 0a1.5 1.5 0 0 0-1.488 1.482l-.099 7.04A1.5 1.5 0 0 0 2.5 20.5h19a1.5 1.5 0 0 0 1.487-1.478l-.099-7.04a1.5 1.5 0 0 0-1.488-1.482H3.75Z" />
                     </svg>
@@ -229,12 +239,12 @@ function LoginPage() {
                     {...register("confirmPassword", { required: "Confirm password is required" })}
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm password"
-                    className="w-full pl-11 pr-11 py-3 bg-gray-50 dark:bg-gray-800/50 border border-gray-150 dark:border-gray-800 text-gray-900 dark:text-white rounded-2xl text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all"
+                    className="w-full pl-12 pr-12 py-3.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white rounded-full text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:bg-white dark:focus:bg-gray-800 transition-all shadow-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                    className="absolute inset-y-0 right-0 pr-4.5 flex items-center text-gray-400 hover:text-gray-655 transition-colors"
                   >
                     {showConfirmPassword ? (
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
@@ -288,9 +298,9 @@ function LoginPage() {
             {/* Login / Sign Up Submit Button */}
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-accent to-indigo-600 hover:to-indigo-700 text-white font-bold py-3 rounded-2xl transition-all shadow-[0_4px_16px_rgba(99,102,241,0.25)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.35)] active:scale-[0.99] cursor-pointer mt-1"
+              className="w-full bg-gradient-to-r from-accent via-indigo-500 to-indigo-600 hover:to-indigo-700 text-white font-bold py-4 rounded-full transition-all shadow-lg shadow-accent/25 hover:shadow-accent/40 hover:shadow-xl active:scale-[0.99] cursor-pointer mt-2 tracking-wide"
             >
-              {isSignup ? "Sign up" : "Login"}
+              {isSignup ? "Create Account" : "Sign in"}
             </button>
           </form>
 
@@ -304,13 +314,13 @@ function LoginPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-2 gap-4">
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 rounded-2xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-850 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="flex items-center justify-center gap-2.5 px-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 rounded-full text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-850 transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              <svg className="w-4.5 h-4.5" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
@@ -322,9 +332,9 @@ function LoginPage() {
             <button
               type="button"
               onClick={handleGithubLogin}
-              className="flex items-center justify-center gap-2 px-4 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 rounded-2xl text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-850 transition-all cursor-pointer shadow-sm active:scale-95"
+              className="flex items-center justify-center gap-2.5 px-4 py-3.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 rounded-full text-sm font-semibold hover:bg-gray-50 dark:hover:bg-gray-850 transition-all cursor-pointer shadow-sm active:scale-95"
             >
-              <svg className="w-4.5 h-4.5 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24">
                 <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.48C19.138 20.162 22 16.418 22 12c0-5.523-4.477-10-10-10z" />
               </svg>
               <span>GitHub</span>
@@ -337,9 +347,6 @@ function LoginPage() {
               onClick={() => { setIsSignup(!isSignup); setAuthError(""); reset() }}
               className="text-accent font-bold ml-1 hover:underline cursor-pointer transition-colors"
             >
-              {isSignup ? "Sign up" : "Sign up"}
-              {/* Wait! The mockup: Screen 1 shows link "Sign up" and Screen 2 shows link "Login". 
-                  Let's make sure the text matches exactly! */}
               {isSignup ? "Login" : "Sign up"}
             </button>
           </p>

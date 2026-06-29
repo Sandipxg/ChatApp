@@ -239,89 +239,88 @@ function SettingsPage() {
     <div className="h-full w-full bg-white dark:bg-gray-950 overflow-hidden font-sans select-none flex">
       
       {/* ── 1. SETTINGS CATEGORIES SIDEBAR ── */}
-      <aside className="w-full md:w-[240px] flex-shrink-0 border-r border-gray-150 dark:border-gray-800 flex flex-col justify-between py-4 bg-white dark:bg-gray-900 select-none">
-        <div className="flex flex-col gap-1 px-2.5">
-
+      <aside className="w-full md:w-[220px] flex-shrink-0 border-r border-gray-100 dark:border-gray-800/80 flex flex-col justify-between py-5 bg-white dark:bg-gray-900 select-none">
+        <div className="flex flex-col gap-0.5 px-3">
 
           <button
             onClick={() => setActiveTab("account")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "account"
-                ? "bg-indigo-50/70 text-accent dark:bg-gray-800"
-                : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60"
             }`}
           >
-            <LockIcon className="w-4.5 h-4.5" />
+            <LockIcon className="w-5 h-5 flex-shrink-0" />
             <span>Account</span>
           </button>
 
           <button
             onClick={() => setActiveTab("notifications")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "notifications"
-                ? "bg-indigo-50/70 text-accent dark:bg-gray-800"
-                : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60"
             }`}
           >
-            <BellIcon className="w-4.5 h-4.5" />
+            <BellIcon className="w-5 h-5 flex-shrink-0" />
             <span>Notifications</span>
           </button>
 
           <button
             onClick={() => setActiveTab("appearance")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-extrabold transition-all cursor-pointer ${
+            className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "appearance"
-                ? "bg-indigo-50/70 text-accent dark:bg-gray-800"
-                : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
+                ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/60"
             }`}
           >
-            <PaintIcon className="w-4.5 h-4.5" />
+            <PaintIcon className="w-5 h-5 flex-shrink-0" />
             <span>Appearance</span>
           </button>
         </div>
 
-        <div className="px-4">
+        <div className="px-3">
           <button
             onClick={handleLogoutClick}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
           >
-            <LogoutIcon className="w-4.5 h-4.5 text-red-500" />
+            <LogoutIcon className="w-5 h-5 text-red-500 flex-shrink-0" />
             <span>Log out</span>
           </button>
         </div>
       </aside>
 
       {/* ── 2. SETTINGS CONTENT PANEL ── */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50 dark:bg-[#0b0f17] select-text">
-        <div className="max-w-2xl mx-auto space-y-6">
+      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-gray-50 dark:bg-[#0d1117] select-text">
+        <div className="max-w-xl mx-auto space-y-8">
 
 
 
           {/* ── 2B. APPEARANCE SETTINGS (Theme/Accent/Wallpaper/Font) ── */}
           {activeTab === "appearance" && (
-            <div className="space-y-6 animate-slide-in">
+            <div className="space-y-8 animate-slide-in">
               
               {/* Theme Selector Section */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Theme</h3>
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Theme</h3>
                 <div className="grid grid-cols-3 gap-3">
                   
                   {/* Light theme card */}
                   <button
                     onClick={() => setTheme("light")}
-                    className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl flex flex-col items-center gap-2 cursor-pointer transition-all relative ${
+                    className={`p-5 bg-white dark:bg-gray-900 border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
                       theme === "light" 
-                        ? "border-accent ring-1 ring-accent" 
-                        : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                        ? "border-accent ring-2 ring-accent/20" 
+                        : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <svg className={`w-6 h-6 ${theme === "light" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg className={`w-7.5 h-7.5 ${theme === "light" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m0 13.5V21m9.75-9h-2.25M4.5 12H2.25m16.909-6.909-1.591 1.59M5.59 18.41l1.59-1.59m11.228 0 1.59 1.59m-11.228-11.23-1.59-1.59M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z" />
                     </svg>
-                    <span className={`text-[11px] font-bold ${theme === "light" ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>Light</span>
+                    <span className={`text-xs font-extrabold ${theme === "light" ? "text-gray-900 dark:text-white" : "text-gray-450"}`}>Light</span>
                     {theme === "light" && (
-                      <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                        <CheckmarkIcon className="w-2.5 h-2.5" />
+                      <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                        <CheckmarkIcon className="w-3 h-3" />
                       </span>
                     )}
                   </button>
@@ -329,19 +328,19 @@ function SettingsPage() {
                   {/* Dark theme card */}
                   <button
                     onClick={() => setTheme("dark")}
-                    className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl flex flex-col items-center gap-2 cursor-pointer transition-all relative ${
+                    className={`p-5 bg-white dark:bg-gray-900 border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
                       theme === "dark" 
-                        ? "border-accent ring-1 ring-accent" 
-                        : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                        ? "border-accent ring-2 ring-accent/20" 
+                        : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <svg className={`w-6 h-6 ${theme === "dark" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg className={`w-7.5 h-7.5 ${theme === "dark" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
                     </svg>
-                    <span className={`text-[11px] font-bold ${theme === "dark" ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>Dark</span>
+                    <span className={`text-xs font-extrabold ${theme === "dark" ? "text-gray-900 dark:text-white" : "text-gray-450"}`}>Dark</span>
                     {theme === "dark" && (
-                      <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                        <CheckmarkIcon className="w-2.5 h-2.5" />
+                      <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                        <CheckmarkIcon className="w-3 h-3" />
                       </span>
                     )}
                   </button>
@@ -349,19 +348,19 @@ function SettingsPage() {
                   {/* System theme card */}
                   <button
                     onClick={() => setTheme("system")}
-                    className={`p-4 bg-white dark:bg-gray-900 border rounded-2xl flex flex-col items-center gap-2 cursor-pointer transition-all relative ${
+                    className={`p-5 bg-white dark:bg-gray-900 border-2 rounded-3xl flex flex-col items-center gap-2.5 cursor-pointer transition-all relative ${
                       theme === "system" 
-                        ? "border-accent ring-1 ring-accent" 
-                        : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                        ? "border-accent ring-2 ring-accent/20" 
+                        : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <svg className={`w-6 h-6 ${theme === "system" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <svg className={`w-7.5 h-7.5 ${theme === "system" ? "text-accent" : "text-gray-400"}`} fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 0 1-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0 1 15 18.257V17.25m6-12V15a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 15V5.25M21 5.25A2.25 2.25 0 0 0 18.75 3H5.25A2.25 2.25 0 0 0 3 5.25m18 0V12a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 12V5.25" />
                     </svg>
-                    <span className={`text-[11px] font-bold ${theme === "system" ? "text-gray-900 dark:text-white" : "text-gray-400"}`}>System</span>
+                    <span className={`text-xs font-extrabold ${theme === "system" ? "text-gray-900 dark:text-white" : "text-gray-450"}`}>System</span>
                     {theme === "system" && (
-                      <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                        <CheckmarkIcon className="w-2.5 h-2.5" />
+                      <span className="absolute top-2 right-2 w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                        <CheckmarkIcon className="w-3 h-3" />
                       </span>
                     )}
                   </button>
@@ -390,62 +389,62 @@ function SettingsPage() {
               </div>
 
               {/* Chat Wallpapers Section */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Chat Wallpaper</h3>
-                <div className="grid grid-cols-5 gap-3.5">
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Chat Wallpaper</h3>
+                <div className="grid grid-cols-5 gap-4">
                   
                   {/* No wallpaper card */}
                   <button
                     onClick={() => setChatWallpaper("none")}
-                    className={`aspect-[3/4] rounded-2xl border flex flex-col items-center justify-center bg-white dark:bg-gray-800 cursor-pointer transition-all relative overflow-hidden ${
-                      chatWallpaper === "none" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    className={`aspect-[3/4] rounded-3xl border flex flex-col items-center justify-center bg-white dark:bg-gray-800 cursor-pointer transition-all relative overflow-hidden ${
+                      chatWallpaper === "none" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <svg className="w-6 h-6 text-gray-300 dark:text-gray-600" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-gray-350 dark:text-gray-550" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" />
                     </svg>
-                    <span className="text-[9px] font-bold text-gray-400 mt-2">No Wallpaper</span>
+                    <span className="text-[10px] font-bold text-gray-400 mt-2">None</span>
                   </button>
 
                   {/* Sunset gradient card */}
                   <button
                     onClick={() => setChatWallpaper("sunset")}
-                    className={`aspect-[3/4] rounded-2xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-orange-100 to-rose-100 dark:from-orange-950/20 dark:to-rose-950/20 ${
-                      chatWallpaper === "sunset" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    className={`aspect-[3/4] rounded-3xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-orange-100 to-rose-100 dark:from-orange-950/20 dark:to-rose-950/20 ${
+                      chatWallpaper === "sunset" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <div className="absolute bottom-1 right-2 text-[8px] text-orange-400 font-bold select-none">Sunset</div>
+                    <div className="absolute bottom-2 right-2.5 text-[9px] text-orange-550 dark:text-orange-400 font-extrabold select-none">Sunset</div>
                   </button>
 
                   {/* Ocean gradient card */}
                   <button
                     onClick={() => setChatWallpaper("ocean")}
-                    className={`aspect-[3/4] rounded-2xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-sky-100 to-indigo-100 dark:from-sky-950/20 dark:to-indigo-950/20 ${
-                      chatWallpaper === "ocean" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    className={`aspect-[3/4] rounded-3xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-sky-100 to-indigo-100 dark:from-sky-950/20 dark:to-indigo-950/20 ${
+                      chatWallpaper === "ocean" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <div className="absolute bottom-1 right-2 text-[8px] text-blue-400 font-bold select-none">Ocean</div>
+                    <div className="absolute bottom-2 right-2.5 text-[9px] text-blue-550 dark:text-blue-400 font-extrabold select-none">Ocean</div>
                   </button>
 
                   {/* Forest gradient card */}
                   <button
                     onClick={() => setChatWallpaper("forest")}
-                    className={`aspect-[3/4] rounded-2xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-emerald-50 to-teal-50 dark:from-emerald-950/10 dark:to-teal-950/10 ${
-                      chatWallpaper === "forest" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    className={`aspect-[3/4] rounded-3xl border cursor-pointer transition-all relative overflow-hidden bg-gradient-to-tr from-emerald-50 to-teal-50 dark:from-emerald-950/10 dark:to-teal-950/10 ${
+                      chatWallpaper === "forest" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <div className="absolute bottom-1 right-2 text-[8px] text-emerald-400 font-bold select-none">Forest</div>
+                    <div className="absolute bottom-2 right-2.5 text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold select-none">Forest</div>
                   </button>
 
                   {/* Mountain Premium Image Card */}
                   <button
                     onClick={() => setChatWallpaper("mountain")}
                     style={{ backgroundImage: "url('/mountain.png')" }}
-                    className={`aspect-[3/4] rounded-2xl border cursor-pointer bg-cover bg-center transition-all relative overflow-hidden ${
-                      chatWallpaper === "mountain" ? "border-accent ring-1 ring-accent" : "border-gray-150 dark:border-gray-800 hover:border-gray-300"
+                    className={`aspect-[3/4] rounded-3xl border cursor-pointer bg-cover bg-center transition-all relative overflow-hidden ${
+                      chatWallpaper === "mountain" ? "border-accent ring-2 ring-accent/20" : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
                     }`}
                   >
-                    <div className="absolute bottom-1 right-2 text-[8px] text-slate-100 font-extrabold drop-shadow select-none">Mountain</div>
+                    <div className="absolute bottom-2 right-2.5 text-[9px] text-slate-100 font-extrabold drop-shadow select-none">Mountain</div>
                   </button>
 
                 </div>
@@ -483,13 +482,13 @@ function SettingsPage() {
 
           {/* ── 2C. NOTIFICATIONS TAB ── */}
           {activeTab === "notifications" && (
-            <div className="space-y-5 animate-slide-in">
-              <h2 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Push Notifications</h2>
+            <div className="space-y-6 animate-slide-in">
+              <h2 className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none">Push Notifications</h2>
               
-              <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-5 text-left space-y-4">
+              <div className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-6 text-left space-y-4 shadow-sm">
                 <div className="space-y-1">
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">Push permission settings</p>
-                  <p className="text-[10px] text-gray-400">Receive desktop alert notifications when messages arrive.</p>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Push permission settings</p>
+                  <p className="text-xs text-gray-400">Receive desktop alert notifications when messages arrive.</p>
                 </div>
 
                 {permission === 'denied' ? (
@@ -501,7 +500,7 @@ function SettingsPage() {
                     <button
                       onClick={handleToggleNotifications}
                       disabled={pushLoading}
-                      className="bg-accent hover:bg-accent/90 text-white font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors disabled:opacity-50 cursor-pointer"
+                      className="bg-accent hover:bg-accent/90 text-white font-extrabold px-6 py-3 rounded-full text-xs tracking-wide transition-all shadow-lg shadow-accent/20 hover:shadow-accent/30 disabled:opacity-50 cursor-pointer"
                     >
                       {pushLoading ? "Processing..." : isSubscribed ? "Disable Push Alerts" : "Enable Push Alerts"}
                     </button>
@@ -510,7 +509,7 @@ function SettingsPage() {
                       <button
                         onClick={handleSendTestPush}
                         disabled={pushLoading}
-                        className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-850 text-gray-700 dark:text-gray-300 font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                        className="bg-gray-100 hover:bg-gray-250 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-700 dark:text-gray-300 font-extrabold px-6 py-3 rounded-full text-xs tracking-wide transition-colors cursor-pointer"
                       >
                         Send Test Push
                       </button>
@@ -523,30 +522,32 @@ function SettingsPage() {
               </div>
 
               {/* Reminders section inside notifications */}
-              <h2 className="text-sm font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none mt-6">Daily Reminders</h2>
+              <h2 className="text-xs font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest text-left select-none mt-8">Daily Reminders</h2>
               
-              <form onSubmit={handleSaveReminder} className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-5 text-left space-y-4">
+              <form onSubmit={handleSaveReminder} className="bg-white dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-3xl p-6 text-left space-y-4 shadow-sm">
                 
                 <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-gray-900 dark:text-white">Enable Reminders</p>
-                    <p className="text-[10px] text-gray-400">Receive a daily scheduled push alert.</p>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">Enable Reminders</p>
+                    <p className="text-xs text-gray-400">Receive a daily scheduled push alert.</p>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={reminderEnabled}
-                    onChange={(e) => setReminderEnabled(e.target.checked)}
-                    className="w-4.5 h-4.5 text-accent border-gray-300 rounded focus:ring-accent"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setReminderEnabled(!reminderEnabled)}
+                    className={`toggle-track ${reminderEnabled ? 'on' : 'off'}`}
+                    aria-label="Toggle reminder"
+                  >
+                    <span className="toggle-thumb" />
+                  </button>
                 </div>
 
                 {reminderEnabled && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3.5">
                     <input
                       type="time"
                       value={reminderTime}
                       onChange={(e) => setReminderTime(e.target.value)}
-                      className="px-3.5 py-2 border border-gray-150 dark:border-gray-800 dark:bg-gray-800 text-gray-950 dark:text-white rounded-xl text-xs focus:outline-none focus:ring-1.5 focus:ring-accent"
+                      className="px-4.5 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white rounded-full text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent/20"
                     />
                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
                       Detected Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'}
@@ -557,7 +558,7 @@ function SettingsPage() {
                 <button
                   type="submit"
                   disabled={reminderLoading}
-                  className="bg-accent hover:bg-accent/90 text-white font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
+                  className="bg-accent hover:bg-accent/90 text-white font-extrabold px-6 py-3 rounded-full text-xs tracking-wide transition-all shadow-lg shadow-accent/20 hover:shadow-accent/30 cursor-pointer"
                 >
                   {reminderLoading ? "Saving..." : "Save Reminder"}
                 </button>
@@ -571,33 +572,43 @@ function SettingsPage() {
           {/* ── 2D. ACCOUNT SECURITY TAB ── */}
           {activeTab === "account" && (
             <div className="space-y-5 animate-slide-in">
-              <h2 className="text-sm font-extrabold text-red-500 uppercase tracking-widest text-left select-none">Delete Account</h2>
+              <div>
+                <h2 className="text-xs font-extrabold text-red-500 uppercase tracking-widest mb-1">Danger Zone</h2>
+                <p className="text-[11px] text-gray-400">These actions are permanent and cannot be undone.</p>
+              </div>
               
-              <form onSubmit={handleDeleteAccount} className="bg-white dark:bg-gray-900 border border-red-100 dark:border-red-950/40 rounded-3xl p-5 text-left space-y-4">
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-red-600 dark:text-red-400">Danger Zone Action</p>
-                  <p className="text-[10px] text-gray-400">This will permanently delete your account, credentials, and message history. This cannot be undone.</p>
+              <form onSubmit={handleDeleteAccount} className="bg-white dark:bg-gray-900 border border-red-100/80 dark:border-red-950/50 rounded-3xl p-6 text-left space-y-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-2xl bg-red-50 dark:bg-red-950/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                    </svg>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-red-600 dark:text-red-400">Delete Account</p>
+                    <p className="text-xs text-gray-400 leading-relaxed">This will permanently delete your account, credentials, and message history.</p>
+                  </div>
                 </div>
 
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase">Confirm Password</label>
+                <div className="flex flex-col gap-2">
+                  <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Confirm Password</label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password to confirm"
-                    className="w-full max-w-sm px-4 py-2.5 border border-gray-150 dark:border-gray-800 dark:bg-gray-800 text-gray-900 dark:text-white rounded-xl text-xs focus:outline-none focus:ring-1.5 focus:ring-red-400"
+                    placeholder="Enter your password to confirm"
+                    className="w-full max-w-sm px-5 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-250 dark:border-gray-700 text-gray-900 dark:text-white rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-red-450/20 focus:border-red-450/40 transition-all"
                   />
                 </div>
 
-                {deleteError && <p className="text-red-500 text-xs font-semibold">{deleteError}</p>}
+                {deleteError && <p className="text-red-500 text-xs font-semibold bg-red-50 dark:bg-red-950/20 p-2.5 rounded-xl border border-red-100 dark:border-red-950/40">{deleteError}</p>}
 
                 <button
                   type="submit"
                   disabled={isDeleting || !password}
-                  className="bg-red-550 hover:bg-red-600 text-white font-extrabold px-4.5 py-2.5 rounded-xl text-xs transition-colors cursor-pointer bg-red-600"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-full text-xs transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/20"
                 >
-                  {isDeleting ? "Deleting..." : "Permanently Delete"}
+                  {isDeleting ? "Deleting..." : "Permanently Delete Account"}
                 </button>
               </form>
             </div>
