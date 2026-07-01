@@ -1,6 +1,6 @@
 # General TODO - ChatApp Project
 
-This document tracks the implementation checklist for the ChatApp project, mapped directly to our restructured 13-phase learning path.
+This document tracks the implementation checklist for the ChatApp project, mapped directly to our multi-phase roadmap.
 
 ---
 
@@ -53,7 +53,7 @@ This document tracks the implementation checklist for the ChatApp project, mappe
 - [ ] Build Group Chat UI frontend components:
   - [ ] Create Group Dialog
   - [ ] Group Settings / Detail Sidebar (members list, admin controls)
-- [ ] Update Socket.IO rooms logic to broadcast group messages to all active members in the room
+- [ ] Update Socket.IO rooms logic to broad-cast group messages to all active members in the room
 
 ---
 
@@ -70,17 +70,7 @@ This document tracks the implementation checklist for the ChatApp project, mappe
 
 ---
 
-## 🎙️ Phase 5: Voice Notes
-*Audio recording and playback inside chat bubbles*
-
-- [ ] Implement client-side audio recorder hook using MediaRecorder API
-- [ ] Add recording indicator UI with timer and cancel slide option
-- [ ] Integrate waveform visualization for audio messages (e.g. using `wavesurfer.js`)
-- [ ] Implement playback controls with 1x/1.5x/2x speed settings
-
----
-
-## ⚙️ Phase 6: Advanced Message Actions
+## ⚙️ Phase 5: Advanced Message Actions
 *WhatsApp/Telegram-style message interactive features*
 
 - [ ] **Reply**: Quote another message in a reply preview card
@@ -92,27 +82,33 @@ This document tracks the implementation checklist for the ChatApp project, mappe
 
 ---
 
-## 🔌 Phase 7: Lightweight PWA & Local Caching
-*Caching assets and last active messages for offline access*
+## 🎙️ Phase 6: Voice Notes
+*Audio recording and playback inside chat bubbles*
 
-- [ ] Update `manifest.json` with correct icons, colors, display settings, and splash screens
-- [ ] Configure Vite PWA plugin or service worker to cache essential assets (HTML, JS, CSS, Font files)
-- [ ] Setup **IndexedDB** on the client (using `idb` or `Dexie.js`) to cache:
-  - [ ] Last 50 messages of the most active conversations
-  - [ ] Basic users directory
-- [ ] Connect IndexedDB with React Query to display cached messages instantly when offline
-- [ ] Build an "Offline/No Connection" banner UI element
+- [ ] Implement client-side audio recorder hook using MediaRecorder API
+- [ ] Add recording indicator UI with timer and cancel slide option
+- [ ] Integrate waveform visualization for audio messages (e.g. using `wavesurfer.js`)
+- [ ] Implement playback controls with 1x/1.5x/2x speed settings
 
 ---
 
-## 🔔 Phase 8: Web Push Notifications
-*Delivering system push notifications when the application is closed or in background*
+## 📱 Phase 7: Offline First
+*Local-first architecture and background sync*
 
-- [ ] Implement Push API subscription flow on frontend service worker
-- [ ] Securely save subscription objects on backend database associated with user profiles
-- [ ] Integrate Web Push library on backend to trigger server-to-client push notifications
-- [ ] Deliver notifications when a user receives a message while offline/inactive
-- [ ] Handle notification click events to open specific chat rooms directly
+- [ ] Store messages locally using IndexedDB
+- [ ] Queue unsent messages and retry automatically when online
+- [ ] Sync conversations and messages when internet connection returns
+- [ ] Support offline conversation loading and offline message sending
+
+---
+
+## 🌐 Phase 8: Progressive Web App
+*Offline accessibility and push integrations*
+
+- [ ] Configure Service Worker and Cache API for offline startup
+- [ ] Setup Web App Manifest for installable chat application
+- [ ] Integrate Static asset caching and offline fallback pages
+- [ ] Setup background synchronization for chat updates
 
 ---
 
@@ -126,7 +122,18 @@ This document tracks the implementation checklist for the ChatApp project, mappe
 
 ---
 
-## 🔍 Phase 10: Global Advanced Search
+## 🟢 Phase 10: Real-time Presence Extensions
+*Enhancing the presence state synchronization*
+
+- [ ] Broadcast detailed statuses:
+  - [ ] "Typing..."
+  - [ ] "Recording voice..."
+  - [ ] "Uploading file..."
+- [ ] Optimize presence heartbeats to avoid excessive database writes
+
+---
+
+## 🔍 Phase 11: Global Advanced Search
 *Locating users, documents, and past chats globally*
 
 - [ ] Implement global search indexing endpoint on the backend
@@ -135,7 +142,7 @@ This document tracks the implementation checklist for the ChatApp project, mappe
 
 ---
 
-## 🛡️ Phase 11: Enhanced Security & E2E Encryption
+## 🛡️ Phase 12: Enhanced Security & E2E Encryption
 *Securing the network and message contents*
 
 - [ ] **E2EE Prototype**: Implement cryptographic message encryption/decryption using the Web Crypto API
@@ -145,7 +152,7 @@ This document tracks the implementation checklist for the ChatApp project, mappe
 
 ---
 
-## 🚀 Phase 12: Production Scaling
+## 🚀 Phase 13: Production Scaling
 *Architecting for high volume concurrent connections*
 
 - [ ] Integrate Redis Adapter with Socket.IO backend to allow multi-instance communications

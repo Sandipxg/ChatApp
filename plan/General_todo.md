@@ -1,0 +1,402 @@
+# ChatApp Master TODO
+
+This document tracks both the concepts to learn and the implementation progress for the ChatApp project.
+
+---
+
+# 🏗️ Phase 0: Base Boilerplate Setup
+*Already completed*
+
+## Learn
+
+- [x] React + Vite project structure
+- [x] Express backend structure
+- [x] MongoDB + Mongoose
+- [x] Better Auth basics
+- [x] Tailwind CSS
+- [x] Docker basics
+
+## Build
+
+- [x] React frontend
+- [x] Express backend
+- [x] MongoDB integration
+- [x] Better Auth
+- [x] Tailwind UI
+- [x] Helmet
+- [x] CORS
+- [x] Rate limiting
+- [x] Push notification settings page
+
+---
+
+# 🔐 Phase 1: Authentication & Presence
+
+## Learn
+
+- [ ] Socket.IO basics
+- [ ] Socket authentication
+- [ ] Session sharing
+- [ ] Online presence architecture
+- [ ] Heartbeat mechanism
+- [ ] Last Seen implementation
+
+## Build
+
+- [ ] Connect Better Auth session to React
+- [ ] Profile picture upload
+- [ ] Connect Socket.IO after login
+- [ ] Store active socket connections
+- [ ] Show online users
+- [ ] Show offline users
+- [ ] Update last seen timestamps
+
+---
+
+# 💬 Phase 2: One-to-One Chat
+
+## Learn
+
+### WebSockets
+
+- [ ] HTTP vs WebSockets
+- [ ] Polling
+- [ ] Long Polling
+- [ ] Server Sent Events
+- [ ] WebSocket lifecycle
+
+### Socket.IO
+
+- [ ] Events
+- [ ] Rooms
+- [ ] Broadcasting
+- [ ] Acknowledgements
+- [ ] Reconnection
+- [ ] Socket middleware
+
+### Chat Architecture
+
+- [ ] Event-driven architecture
+- [ ] Optimistic UI
+- [ ] Message lifecycle
+- [ ] REST vs Socket responsibilities
+
+### Database Design
+
+- [ ] Conversation schema
+- [ ] Message schema
+- [ ] Indexes
+- [ ] Pagination
+
+## Build
+
+- [ ] Conversation schema
+- [ ] Message schema
+- [ ] Get conversation API
+- [ ] Get messages API
+- [ ] Socket.IO backend
+- [ ] Socket.IO frontend
+- [ ] Join conversation rooms
+- [ ] Send messages
+- [ ] Receive messages
+- [ ] Typing indicator
+- [ ] Read receipts
+- [ ] Delivered receipts
+- [ ] Last Seen
+- [ ] Online indicator
+
+---
+
+# 👥 Phase 3: Group Chats
+
+## Learn
+
+- [ ] Group permissions
+- [ ] Socket.IO rooms
+- [ ] Role-based authorization
+- [ ] Group data modelling
+
+## Build
+
+- [ ] Group conversations
+- [ ] Create groups
+- [ ] Add members
+- [ ] Remove members
+- [ ] Promote admins
+- [ ] Rename groups
+- [ ] Group avatar
+- [ ] Group settings page
+
+---
+
+# 📁 Phase 4: File Sharing
+
+## Learn
+
+- [ ] Multipart Form Data
+- [ ] Upload streaming
+- [ ] Cloudinary
+- [ ] AWS S3
+- [ ] Upload progress
+
+## Build
+
+- [ ] Attachment schema
+- [ ] Upload API
+- [ ] Drag & Drop
+- [ ] Preview uploads
+- [ ] Upload progress
+- [ ] Image viewer
+- [ ] PDF preview
+- [ ] Audio player
+- [ ] Video player
+
+---
+
+# ⚙️ Phase 5: Advanced Messaging
+
+## Learn
+
+- [ ] Message editing
+- [ ] Soft delete
+- [ ] Hard delete
+- [ ] Emoji reaction architecture
+- [ ] Message pinning
+- [ ] Search indexing
+
+## Build
+
+- [ ] Reply
+- [ ] Edit
+- [ ] Delete
+- [ ] Delete for everyone
+- [ ] Emoji reactions
+- [ ] Pin messages
+- [ ] Conversation search
+
+---
+
+# 🎙️ Phase 6: Voice Notes
+
+## Learn
+
+- [ ] MediaRecorder API
+- [ ] Audio encoding
+- [ ] WaveSurfer.js
+- [ ] Blob handling
+
+## Build
+
+- [ ] Voice recording
+- [ ] Timer
+- [ ] Cancel recording
+- [ ] Waveform
+- [ ] Playback controls
+- [ ] Playback speed
+
+---
+
+# 📱 Phase 7: Offline First
+
+## Learn
+
+- [ ] IndexedDB
+- [ ] Local-first architecture
+- [ ] Background Sync
+- [ ] Retry queues
+- [ ] Conflict resolution
+- [ ] Cache API
+- [ ] Optimistic UI
+
+## Build
+
+- [ ] Store messages locally
+- [ ] Queue unsent messages
+- [ ] Retry automatically
+- [ ] Sync when online
+- [ ] Offline conversation loading
+- [ ] Offline message sending
+
+---
+
+# 🌐 Phase 8: Progressive Web App
+
+## Learn
+
+- [ ] Service Workers
+- [ ] Manifest
+- [ ] Push API
+- [ ] Notification API
+- [ ] Install Prompt
+
+## Build
+
+- [ ] Installable app
+- [ ] Offline startup
+- [ ] Static asset caching
+- [ ] Push notifications
+- [ ] Background sync
+
+---
+
+# 📞 Phase 9: Voice & Video Calls
+
+## Learn
+
+### WebRTC
+
+- [ ] Peer connections
+- [ ] SDP
+- [ ] ICE Candidates
+- [ ] STUN
+- [ ] TURN
+- [ ] NAT Traversal
+
+### Signaling
+
+- [ ] Socket.IO signaling
+- [ ] Call lifecycle
+
+## Build
+
+- [ ] Voice calls
+- [ ] Video calls
+- [ ] Incoming call UI
+- [ ] Active call UI
+- [ ] Camera toggle
+- [ ] Mic toggle
+- [ ] Screen sharing
+
+---
+
+# 🟢 Phase 10: Presence Extensions
+
+## Learn
+
+- [ ] Presence synchronization
+- [ ] Heartbeat optimization
+- [ ] Presence caching
+
+## Build
+
+- [ ] Typing...
+- [ ] Recording...
+- [ ] Uploading...
+- [ ] Better heartbeat handling
+
+---
+
+# 🔍 Phase 11: Global Search
+
+## Learn
+
+- [ ] MongoDB text indexes
+- [ ] Search optimization
+- [ ] Filtering
+
+## Build
+
+- [ ] Search API
+- [ ] Filter by sender
+- [ ] Filter by date
+- [ ] Filter by file
+- [ ] Search UI
+
+---
+
+# 🔔 Phase 12: Push Notifications
+
+## Learn
+
+- [ ] Push subscriptions
+- [ ] VAPID Keys
+- [ ] Notification payloads
+
+## Build
+
+- [ ] Notify offline users
+- [ ] Open conversation on click
+- [ ] Notification settings
+
+---
+
+# 🛡️ Phase 13: Security
+
+## Learn
+
+- [ ] Web Crypto API
+- [ ] End-to-End Encryption basics
+- [ ] Diffie-Hellman
+- [ ] Signal Protocol overview
+- [ ] Socket validation
+- [ ] XSS prevention
+- [ ] Rate limiting
+
+## Build
+
+- [ ] Encrypt messages (prototype)
+- [ ] Key exchange
+- [ ] Secure socket events
+- [ ] Input sanitization
+- [ ] Better rate limiting
+
+---
+
+# 🚀 Phase 14: Scaling
+
+## Learn
+
+- [ ] Redis
+- [ ] Redis Pub/Sub
+- [ ] Socket.IO Redis Adapter
+- [ ] Horizontal Scaling
+- [ ] Sticky Sessions
+- [ ] Load Balancers
+- [ ] NGINX
+- [ ] Reverse Proxy
+
+## Build
+
+- [ ] Redis container
+- [ ] Redis adapter
+- [ ] Multiple backend instances
+- [ ] NGINX
+- [ ] Load testing (Artillery)
+
+---
+
+# 🧪 Phase 15: Testing
+
+## Learn
+
+- [ ] Socket testing
+- [ ] API testing
+- [ ] Multi-client testing
+- [ ] Performance testing
+
+## Build
+
+- [ ] Test multiple users
+- [ ] Test reconnects
+- [ ] Test offline mode
+- [ ] Test duplicate messages
+- [ ] Test large group chats
+
+---
+
+# 🚀 Phase 16: Deployment
+
+## Learn
+
+- [ ] WebSocket deployment
+- [ ] HTTPS
+- [ ] Reverse Proxy
+- [ ] Production monitoring
+
+## Build
+
+- [ ] Deploy frontend
+- [ ] Deploy backend
+- [ ] Deploy MongoDB
+- [ ] Configure HTTPS
+- [ ] Production socket testing

@@ -1,0 +1,284 @@
+# Real-Time Chat App Todo
+
+Use this file to track progress topic by topic.
+
+---
+
+## 1. WebSockets Fundamentals
+
+Learn:
+- [ ] Understand why HTTP is not enough for chat applications
+- [ ] Understand Polling
+- [ ] Understand Long Polling
+- [ ] Understand Server-Sent Events (SSE)
+- [ ] Understand WebSockets
+- [ ] Understand WebSocket lifecycle (Connect → Disconnect)
+
+Practice:
+- [ ] Build a simple WebSocket echo server
+- [ ] Send messages between two browser tabs
+
+---
+
+## 2. Socket.IO
+
+Learn:
+- [ ] Understand why Socket.IO exists over raw WebSockets
+- [ ] Learn Socket.IO client & server setup
+- [ ] Learn emitting events
+- [ ] Learn listening to events
+- [ ] Learn acknowledgements
+- [ ] Learn broadcasting
+- [ ] Learn rooms
+- [ ] Learn namespaces
+- [ ] Learn reconnection handling
+- [ ] Learn socket middleware
+
+Practice:
+- [ ] Build a simple real-time chat using Socket.IO
+
+---
+
+## 3. Real-Time Architecture
+
+Learn:
+- [ ] Understand event-driven architecture
+- [ ] Understand client → server → client event flow
+- [ ] Understand request vs event
+- [ ] Learn event naming conventions
+- [ ] Understand optimistic updates
+
+Practice:
+- [ ] Design all chat events before coding
+- [ ] Separate REST endpoints from Socket.IO events
+
+---
+
+## 4. Chat Database Design
+
+Learn:
+- [ ] Design User schema
+- [ ] Design Conversation schema
+- [ ] Design Message schema
+- [ ] Understand one-to-one conversations
+- [ ] Understand group conversations
+- [ ] Learn message references
+- [ ] Learn indexing
+- [ ] Learn pagination
+
+Practice:
+- [ ] Design MongoDB collections
+- [ ] Create Mongoose models
+
+---
+
+## 5. Authentication for Real-Time Apps
+
+Learn:
+- [ ] Authenticate Socket.IO connections
+- [ ] Understand session sharing
+- [ ] Understand protected socket events
+- [ ] Learn authorization for conversations
+
+Practice:
+- [ ] Allow only authenticated users to connect
+- [ ] Reject unauthorized socket connections
+
+---
+
+## 6. State Management
+
+Learn:
+- [ ] Learn Zustand
+- [ ] Learn TanStack Query
+- [ ] Understand local state vs server state
+- [ ] Learn optimistic UI
+
+Practice:
+- [ ] Store conversations
+- [ ] Store current messages
+- [ ] Store online users
+- [ ] Store typing users
+
+---
+
+## 7. Offline First
+
+Learn:
+- [ ] Learn IndexedDB
+- [ ] Learn local-first architecture
+- [ ] Learn message queueing
+- [ ] Learn retry mechanisms
+- [ ] Learn conflict resolution
+- [ ] Learn optimistic UI patterns
+
+Practice:
+- [ ] Store messages locally
+- [ ] Sync when internet returns
+
+---
+
+## 8. Progressive Web Apps
+
+Learn:
+- [ ] Review Service Workers
+- [ ] Review Cache API
+- [ ] Review Manifest
+- [ ] Learn Background Sync
+- [ ] Learn Push Notifications
+
+Practice:
+- [ ] Make chat installable
+- [ ] Cache static assets
+- [ ] Enable offline startup
+
+---
+
+## 9. Presence System
+
+Learn:
+- [ ] Understand online/offline detection
+- [ ] Learn heartbeat mechanism
+- [ ] Learn ping/pong
+- [ ] Learn last seen logic
+- [ ] Learn typing indicators
+
+Practice:
+- [ ] Show online users
+- [ ] Show typing status
+- [ ] Update last seen
+
+---
+
+## 10. Message Delivery
+
+Learn:
+- [ ] Understand message lifecycle
+- [ ] Learn sent status
+- [ ] Learn delivered status
+- [ ] Learn read receipts
+- [ ] Learn acknowledgements
+
+Practice:
+- [ ] Update message status in real time
+
+---
+
+## 11. File Uploads
+
+Learn:
+- [ ] Learn multipart/form-data
+- [ ] Learn upload streaming
+- [ ] Learn image optimization
+- [ ] Learn Cloudinary or AWS S3
+
+Practice:
+- [ ] Upload images
+- [ ] Upload documents
+- [ ] Show upload progress
+
+---
+
+## 12. Push Notifications
+
+Learn:
+- [ ] Learn Notification API
+- [ ] Learn Push API
+- [ ] Learn VAPID keys
+- [ ] Learn push subscriptions
+
+Practice:
+- [ ] Notify users when offline
+- [ ] Open chat from notification
+
+---
+
+## 13. Performance
+
+Learn:
+- [ ] Learn infinite scrolling
+- [ ] Learn lazy loading
+- [ ] Learn virtualization
+- [ ] Learn debouncing
+- [ ] Learn throttling
+
+Practice:
+- [ ] Load messages page by page
+- [ ] Optimize large conversations
+
+---
+
+## 14. Security
+
+Learn:
+- [ ] Validate socket events
+- [ ] Rate limit sockets
+- [ ] Validate uploaded files
+- [ ] Prevent XSS
+- [ ] Learn secure message handling
+
+Practice:
+- [ ] Secure every socket event
+- [ ] Reject invalid payloads
+
+---
+
+## 15. Scalability
+
+Learn:
+- [ ] Understand horizontal scaling
+- [ ] Learn Redis Pub/Sub
+- [ ] Learn Socket.IO Redis Adapter
+- [ ] Understand sticky sessions
+- [ ] Understand load balancers
+
+Practice:
+- [ ] Run multiple Socket.IO servers
+- [ ] Sync sockets using Redis
+
+---
+
+## 16. System Design
+
+Learn:
+- [ ] How WhatsApp works
+- [ ] How Discord works
+- [ ] How Slack works
+- [ ] Delivery guarantees
+- [ ] Message ordering
+- [ ] Event sourcing basics
+
+Practice:
+- [ ] Draw complete chat architecture
+- [ ] Explain message flow from sender to receiver
+
+---
+
+## 17. Testing
+
+Learn:
+- [ ] Learn socket testing
+- [ ] Learn API testing
+- [ ] Learn manual multi-client testing
+
+Practice:
+- [ ] Test multiple users
+- [ ] Test reconnects
+- [ ] Test offline mode
+- [ ] Test duplicate messages
+
+---
+
+## 18. Deployment
+
+Learn:
+- [ ] Deploy Socket.IO backend
+- [ ] Configure reverse proxy
+- [ ] Configure HTTPS
+- [ ] Configure environment variables
+
+Practice:
+- [ ] Deploy frontend
+- [ ] Deploy backend
+- [ ] Deploy MongoDB
+- [ ] Test production sockets
