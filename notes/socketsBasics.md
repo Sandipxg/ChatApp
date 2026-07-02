@@ -222,3 +222,7 @@ status: {
 1. **`messages_delivered`**: Emitted when Bob connects to the WebSocket. The server updates all his pending `'sent'` messages to `'delivered'` and alerts Alice's client to show grey double ticks.
 2. **`messages_read`**: Emitted when Bob selects Alice's chat or receives a new message while looking at her chat. The server updates the database status to `'read'` and alerts Alice's client to show blue double ticks.
 
+** `References` **
+1] http://youtube.com/watch?v=UUddpbgPEJM
+2] https://www.youtube.com/watch?v=bR4b_Io8shE&t=24886s ( last 2 portions )
+
