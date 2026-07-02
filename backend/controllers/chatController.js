@@ -1,6 +1,7 @@
 import { User } from '../models/userModel.js'
 import { Message } from '../models/messageModel.js'
 import AppError from '../utils/AppError.js'
+import { isUserOnline } from '../services/socketService.js'
 
 /**
  * Fetches all registered users in the database (excluding the logged-in user).
@@ -8,7 +9,7 @@ import AppError from '../utils/AppError.js'
 export async function getContacts(req, res, next) {
   try {
     const currentUserId = req.userId
-    const contacts = await User.find({ _id: { $ne: currentUserId } }).select('email name image username')
+    const contacts = await User.find({ _id: { $ne: currentUserId } }).select('email name image username lastSeen')
     
     const clientContacts = contacts.map((user) => ({
       id: user._id.toString(),
@@ -16,6 +17,8 @@ export async function getContacts(req, res, next) {
       email: user.email,
       image: user.image,
       username: user.username || user.name || 'User',
+      isOnline: isUserOnline(user._id.toString()),
+      lastSeen: user.lastSeen,
     }))
 
     res.json(clientContacts)
@@ -52,16 +55,28 @@ export async function getChatPartners(req, res, next) {
     }
 
     // Fetch user details for these partners
-    const partners = await User.find({ _id: { $in: Array.from(partnerIds) } })
+    const partners = await User.find({ _id: { $in: Array.from(partnerIds) } }).select('email name image username lastSeen')
 
-    const result = partners.map((user) => {
-      const latestMsg = latestMessagesMap.get(user._id.toString())
+    const result = await Promise.all(partners.map(async (user) => {
+      const partnerId = user._id.toString()
+      const latestMsg = latestMessagesMap.get(partnerId)
+      const chatId = [currentUserId, partnerId].sort().join('_')
+
+      const unreadCount = await Message.countDocuments({
+        chatId,
+        receiverId: currentUserId,
+        status: { $ne: 'read' }
+      })
+
       return {
-        id: user._id.toString(),
+        id: partnerId,
         name: user.name || '',
         email: user.email,
         image: user.image,
         username: user.username || user.name || 'User',
+        isOnline: isUserOnline(partnerId),
+        lastSeen: user.lastSeen,
+        unreadCount,
         latestMessage: latestMsg
           ? {
               id: latestMsg._id.toString(),
@@ -70,11 +85,11 @@ export async function getChatPartners(req, res, next) {
               senderId: latestMsg.senderId,
               receiverId: latestMsg.receiverId,
               createdAt: latestMsg.createdAt,
-              isRead: latestMsg.isRead,
+              status: latestMsg.status,
             }
           : null,
       }
-    })
+    }))
 
     // Sort partners by the timestamp of their latest message in descending order
     result.sort((a, b) => {
@@ -116,6 +131,7 @@ export async function sendMsg(req, res, next) {
       senderId,
       receiverId,
       text,
+      status: isUserOnline(receiverId) ? 'delivered' : 'sent',
     })
 
     res.status(201).json(message)
@@ -141,10 +157,10 @@ export async function getMsgByChatid(req, res, next) {
     // Fetch messages sorted ascending by creation date
     const messages = await Message.find({ chatId }).sort({ createdAt: 1 })
 
-    // Mark unread messages sent to the current user in this chat as read
+    // Mark messages sent to the current user in this chat as read
     await Message.updateMany(
-      { chatId, receiverId: currentUserId, isRead: false },
-      { $set: { isRead: true } }
+      { chatId, receiverId: currentUserId, status: { $ne: 'read' } },
+      { $set: { status: 'read' } }
     )
 
     res.json(messages)

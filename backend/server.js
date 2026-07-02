@@ -10,7 +10,10 @@ async function startServer() {
     // 2. Dynamically import app so that mongoose.connection is fully populated
     const { default: app } = await import('./app.js')
 
-    app.listen(PORT, () => console.log(`Journal API running on http://localhost:${PORT}`))
+    const server = app.listen(PORT, () => console.log(`Journal API running on http://localhost:${PORT}`))
+
+    const { init: initSocket } = await import('./services/socketService.js')
+    initSocket(server)
 }
 
 startServer().catch((error) => {

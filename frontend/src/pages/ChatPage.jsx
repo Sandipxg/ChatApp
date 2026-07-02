@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useContext } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeContext from '../context/ThemeContext'
-import { fetchContacts, fetchPartners, fetchMessages, sendMessage } from '../services/chatService'
+import { fetchContacts, fetchPartners, fetchMessages } from '../services/chatService'
+import { useSocket } from '../context/SocketContext'
 
 // Play popup message dispatch sound using Web Audio API synthesis (pure offline solution)
 function playPopSound() {
@@ -90,6 +91,7 @@ function formatTime(isoString) {
 export default function ChatPage() {
   const { currentUser } = useAuth()
   const { chatWallpaper, enterToSend, playSounds } = useContext(ThemeContext)
+  const { socket, onlineUsers, typingStatus, sendMessageViaSocket, sendTypingStatus, markChatAsRead } = useSocket()
   const location = useLocation()
   
   const [activeTab, setActiveTab] = useState('chats') // 'chats' or 'contacts'
@@ -106,8 +108,7 @@ export default function ChatPage() {
   const [error, setError] = useState(null)
 
   const messagesEndRef = useRef(null)
-  const pollingRef = useRef(null)
-  const sidebarPollingRef = useRef(null)
+  const typingTimeoutRef = useRef(null)
 
   // Scroll to bottom
   const scrollToBottom = () => {
@@ -147,48 +148,119 @@ export default function ChatPage() {
     loadInitialData()
   }, [])
 
-  // Poll for messages (Only for real partners)
+  // Debounce typing status broadcast when inputText changes
   useEffect(() => {
-    if (selectedPartner && !selectedPartner.isMock) {
-      const chatId = [currentUser.id, selectedPartner.id].sort().join('_')
-      
-      const pollMessages = async () => {
-        try {
-          const data = await fetchMessages(chatId)
-          if (data.length !== messages.length || (data.length > 0 && data[data.length - 1]._id !== messages[messages.length - 1]?._id)) {
-            setMessages(data)
-            if (playSounds) playIncomingSound()
-            setTimeout(scrollToBottom, 50)
+    if (!selectedPartner || !inputText.trim() || !socket) return
+
+    sendTypingStatus(selectedPartner.id, true)
+
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+      sendTypingStatus(selectedPartner.id, false)
+    }, 2000)
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [inputText, selectedPartner, socket])
+
+  // Listen for real-time messages and user presence status updates from WebSocket
+  useEffect(() => {
+    if (!socket) return
+
+    const handleNewMessage = async (msg) => {
+      if (selectedPartner) {
+        const currentChatId = [currentUser.id, selectedPartner.id].sort().join('_')
+        if (msg.chatId === currentChatId) {
+          setMessages((prev) => {
+            if (prev.some((m) => (m._id || m.id) === (msg._id || msg.id))) return prev
+            return [...prev, msg]
+          })
+          if (msg.senderId !== currentUser.id && playSounds) {
+            playIncomingSound()
           }
-        } catch (err) {
-          console.error('Error polling messages:', err)
+          setTimeout(scrollToBottom, 50)
+
+          try {
+            if (msg.senderId !== currentUser.id) {
+              markChatAsRead(currentChatId)
+            }
+          } catch (err) {
+            console.error('Failed to mark message as read:', err)
+          }
         }
       }
 
-      pollingRef.current = setInterval(pollMessages, 3000)
-    }
-
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current)
-    }
-  }, [selectedPartner, messages.length, currentUser.id, playSounds])
-
-  // Poll sidebar partners (Only real partners)
-  useEffect(() => {
-    const pollSidebar = async () => {
       try {
         const partnersList = await fetchPartners()
         setPartners(partnersList)
       } catch (err) {
-        console.error('Error polling sidebar partners:', err)
+        console.error('Error refreshing sidebar after new message:', err)
       }
     }
 
-    sidebarPollingRef.current = setInterval(pollSidebar, 12000)
-    return () => {
-      if (sidebarPollingRef.current) clearInterval(sidebarPollingRef.current)
+    const handleUserOnline = () => {
+      fetchPartners().then(setPartners).catch(console.error)
     }
-  }, [])
+
+    const handleUserOffline = ({ userId, lastSeen }) => {
+      setContacts((prev) =>
+        prev.map((c) => (c.id === userId ? { ...c, lastSeen } : c))
+      )
+      setPartners((prev) =>
+        prev.map((p) => (p.id === userId ? { ...p, lastSeen } : p))
+      )
+    }
+
+    const handleMessagesDelivered = ({ chatId }) => {
+      if (selectedPartner) {
+        const currentChatId = [currentUser.id, selectedPartner.id].sort().join('_')
+        if (chatId === currentChatId) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.senderId === currentUser.id && m.status === 'sent'
+                ? { ...m, status: 'delivered' }
+                : m
+            )
+          )
+        }
+      }
+    }
+
+    const handleMessagesRead = ({ chatId }) => {
+      if (selectedPartner) {
+        const currentChatId = [currentUser.id, selectedPartner.id].sort().join('_')
+        if (chatId === currentChatId) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.senderId === currentUser.id && m.status !== 'read'
+                ? { ...m, status: 'read' }
+                : m
+            )
+          )
+        }
+      }
+    }
+
+    socket.on('new_message', handleNewMessage)
+    socket.on('user_online', handleUserOnline)
+    socket.on('user_offline', handleUserOffline)
+    socket.on('messages_delivered', handleMessagesDelivered)
+    socket.on('messages_read', handleMessagesRead)
+
+    return () => {
+      socket.off('new_message', handleNewMessage)
+      socket.off('user_online', handleUserOnline)
+      socket.off('user_offline', handleUserOffline)
+      socket.off('messages_delivered', handleMessagesDelivered)
+      socket.off('messages_read', handleMessagesRead)
+    }
+  }, [socket, selectedPartner, currentUser.id, playSounds, markChatAsRead])
 
   // Select a partner
   const handleSelectPartner = async (partner) => {
@@ -200,6 +272,8 @@ export default function ChatPage() {
       const chatId = [currentUser.id, partner.id].sort().join('_')
       const messageHistory = await fetchMessages(chatId)
       setMessages(messageHistory)
+      
+      markChatAsRead(chatId)
       
       const updatedPartners = await fetchPartners()
       setPartners(updatedPartners)
@@ -220,19 +294,18 @@ export default function ChatPage() {
     const textToSend = inputText.trim()
     setInputText('')
 
-    // Play Pop sound if enabled
     if (playSounds) playPopSound()
 
+    sendTypingStatus(selectedPartner.id, false)
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
     try {
-      const savedMsg = await sendMessage(selectedPartner.id, textToSend)
-      setMessages((prev) => [...prev, savedMsg])
-      
-      const updatedPartners = await fetchPartners()
-      setPartners(updatedPartners)
-      
+      await sendMessageViaSocket(selectedPartner.id, textToSend)
       setTimeout(scrollToBottom, 50)
     } catch (err) {
-      console.error('Error sending message:', err)
+      console.error('Error sending message via socket:', err)
       setError('Failed to send message.')
     }
   }
@@ -352,6 +425,8 @@ export default function ChatPage() {
             ) : (
               filteredPartners.map((partner) => {
                 const isSelected = selectedPartner?.id === partner.id
+                const isOnline = onlineUsers.includes(partner.id)
+                const isTyping = typingStatus[partner.id]
                 return (
                   <div
                     key={partner.id}
@@ -370,6 +445,9 @@ export default function ChatPage() {
                           {partner.isGroup ? '👥' : getInitials(partner.username)}
                         </div>
                       )}
+                      {!partner.isGroup && isOnline && (
+                        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Online" />
+                      )}
                     </div>
 
                     <div className="flex-1 min-w-0 text-left">
@@ -385,7 +463,11 @@ export default function ChatPage() {
                         <p className={`text-xs truncate max-w-[160px] ${
                           partner.unreadCount > 0 ? 'text-gray-700 dark:text-gray-200 font-semibold' : 'text-gray-400 dark:text-gray-500'
                         }`}>
-                          {partner.latestMessage ? partner.latestMessage.text : 'Start a conversation'}
+                          {isTyping ? (
+                            <span className="text-accent font-bold">typing...</span>
+                          ) : (
+                            partner.latestMessage ? partner.latestMessage.text : 'Start a conversation'
+                          )}
                         </p>
                         {partner.unreadCount > 0 && (
                           <span className="flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-[10px] font-extrabold text-white flex items-center justify-center shadow-sm select-none">
@@ -407,6 +489,7 @@ export default function ChatPage() {
             ) : (
               filteredContacts.map((contact) => {
                 const isSelected = selectedPartner?.id === contact.id
+                const isOnline = onlineUsers.includes(contact.id)
                 return (
                   <div
                     key={contact.id}
@@ -424,6 +507,9 @@ export default function ChatPage() {
                         <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base ${getAvatarBg(contact.id)}`}>
                           {getInitials(contact.username)}
                         </div>
+                      )}
+                      {!contact.isGroup && isOnline && (
+                        <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Online" />
                       )}
                     </div>
                     <div className="text-left flex-1 min-w-0">
@@ -469,11 +555,26 @@ export default function ChatPage() {
                       {selectedPartner.isGroup ? '👥' : getInitials(selectedPartner.username)}
                     </div>
                   )}
+                  {!selectedPartner.isGroup && onlineUsers.includes(selectedPartner.id) && (
+                    <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Online" />
+                  )}
                 </div>
 
                 <div className="text-left leading-tight flex-1 min-w-0">
                   <h3 className="text-base font-bold text-text-title truncate">{selectedPartner.username}</h3>
-                  <p className="text-xs text-text-body opacity-60 truncate mt-0.5">{selectedPartner.email}</p>
+                  <p className="text-xs text-text-body opacity-60 truncate mt-0.5">
+                    {typingStatus[selectedPartner.id] ? (
+                      <span className="text-accent font-semibold animate-pulse">typing...</span>
+                    ) : selectedPartner.isGroup ? (
+                      selectedPartner.email
+                    ) : onlineUsers.includes(selectedPartner.id) ? (
+                      'Online'
+                    ) : selectedPartner.lastSeen ? (
+                      `Last seen ${new Date(selectedPartner.lastSeen).toLocaleString()}`
+                    ) : (
+                      'Offline'
+                    )}
+                  </p>
                 </div>
               </div>
             </div>
@@ -526,10 +627,30 @@ export default function ChatPage() {
                       <div className="flex items-center gap-1 mt-1 px-1 text-xs text-gray-400 dark:text-gray-500 select-none">
                         <span>{formatTime(msg.createdAt)}</span>
                         {isOwnMessage && (
-                          <span className="text-accent/80 flex items-center">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                            </svg>
+                          <span className="flex items-center">
+                            {msg.status === 'sent' ? (
+                              <svg className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                              </svg>
+                            ) : msg.status === 'delivered' ? (
+                              <div className="flex -space-x-1.5 items-center text-gray-400 dark:text-gray-500">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                              </div>
+                            ) : (
+                              <div className="flex -space-x-1.5 items-center text-sky-400 dark:text-sky-500">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                </svg>
+                              </div>
+                            )}
                           </span>
                         )}
                       </div>

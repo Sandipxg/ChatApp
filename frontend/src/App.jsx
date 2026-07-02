@@ -3,6 +3,7 @@ import { useContext, useState, lazy, Suspense, useEffect } from "react"
 import { ThemeProvider } from "./context/ThemeContext"
 import ThemeContext from "./context/ThemeContext"
 import { AuthProvider, useAuth } from "./context/AuthContext"
+import { SocketProvider } from "./context/SocketContext"
 import { InstallProvider, useInstall } from './context/InstallContext'
 
 import ProtectedRoute from "./components/ProtectedRoute"
@@ -292,13 +293,15 @@ function AppLayout() {
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <InstallProvider>
-          <BrowserRouter>
-            <AppLayout />
-          </BrowserRouter>
-        </InstallProvider>
-      </ThemeProvider>
+      <SocketProvider>
+        <ThemeProvider>
+          <InstallProvider>
+            <BrowserRouter>
+              <AppLayout />
+            </BrowserRouter>
+          </InstallProvider>
+        </ThemeProvider>
+      </SocketProvider>
     </AuthProvider>
   )
 }

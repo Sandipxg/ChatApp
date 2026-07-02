@@ -30,6 +30,10 @@ const userSchema = new mongoose.Schema(
       type: String, // Local timezone of the device, e.g. "Asia/Kolkata"
       default: 'UTC',
     },
+    lastSeen: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

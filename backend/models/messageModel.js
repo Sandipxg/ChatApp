@@ -22,9 +22,11 @@ const messageSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    isRead: {
-      type: Boolean,
-      default: false,
+    status: {
+      type: String,
+      enum: ['sent', 'delivered', 'read'],
+      default: 'sent',
+      index: true,
     },
   },
   {
