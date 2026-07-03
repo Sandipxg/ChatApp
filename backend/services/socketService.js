@@ -2,6 +2,7 @@ import { Server } from 'socket.io'
 import { auth } from '../config/auth.js'
 import { User } from '../models/userModel.js'
 import { Message } from '../models/messageModel.js'
+import { Conversation } from '../models/conversationModel.js'
 
 let io = null
 
@@ -78,9 +79,20 @@ export function init(server) {
           return
         }
 
-        // Generate unique chatId by sorting user IDs alphabetically
-        const chatId = [userId, receiverId].sort().join('_')
+        // Find or create the conversation
+        let conversation = await Conversation.findOne({
+          isGroup: false,
+          participants: { $all: [userId, receiverId], $size: 2 }
+        })
 
+        if (!conversation) {
+          conversation = await Conversation.create({
+            participants: [userId, receiverId],
+            isGroup: false
+          })
+        }
+
+        const chatId = conversation._id.toString()
         const isReceiverOnline = isUserOnline(receiverId)
 
         const message = await Message.create({
@@ -90,6 +102,10 @@ export function init(server) {
           text,
           status: isReceiverOnline ? 'delivered' : 'sent',
         })
+
+        // Update lastMessage on conversation
+        conversation.lastMessage = message._id
+        await conversation.save()
 
         // Broadcast new message to both participants (handles synchronization across multiple open tabs)
         io.to(userId).to(receiverId).emit('new_message', message)
@@ -115,10 +131,24 @@ export function init(server) {
       try {
         if (!chatId) return
 
-        const participants = chatId.split('_')
-        if (!participants.includes(userId)) {
-          if (callback) callback({ error: 'Unauthorized' })
-          return
+        // Fetch the conversation to verify participation and find other participant
+        let otherUserId = null
+        if (chatId.includes('_')) {
+          // Fallback compatibility for old dynamic ID format
+          const participants = chatId.split('_')
+          if (!participants.includes(userId)) {
+            if (callback) callback({ error: 'Unauthorized' })
+            return
+          }
+          otherUserId = participants.find((id) => id !== userId)
+        } else {
+          // Standard mongoose conversationId
+          const conversation = await Conversation.findById(chatId)
+          if (!conversation || !conversation.participants.some(p => p.toString() === userId)) {
+            if (callback) callback({ error: 'Unauthorized' })
+            return
+          }
+          otherUserId = conversation.participants.find(p => p.toString() !== userId).toString()
         }
 
         await Message.updateMany(
@@ -126,8 +156,9 @@ export function init(server) {
           { $set: { status: 'read' } }
         )
 
-        const otherUserId = participants.find((id) => id !== userId)
-        io.to(otherUserId).emit('messages_read', { chatId, readerId: userId })
+        if (otherUserId) {
+          io.to(otherUserId).emit('messages_read', { chatId, readerId: userId })
+        }
 
         if (callback) callback({ success: true })
       } catch (err) {
@@ -181,11 +212,11 @@ async function deliverOfflineMessages(receiverId) {
       { $set: { status: 'delivered' } }
     )
 
-    const senderIds = Array.from(new Set(unsentMessages.map((m) => m.senderId)))
-    for (const senderId of senderIds) {
-      io.to(senderId).emit('messages_delivered', {
+    // Notify each sender that their messages were delivered
+    for (const msg of unsentMessages) {
+      io.to(msg.senderId).emit('messages_delivered', {
         receiverId,
-        chatId: [senderId, receiverId].sort().join('_')
+        chatId: msg.chatId
       })
     }
   } catch (err) {

@@ -175,7 +175,7 @@ export default function ChatPage() {
 
     const handleNewMessage = async (msg) => {
       if (selectedPartner) {
-        const currentChatId = [currentUser.id, selectedPartner.id].sort().join('_')
+        const currentChatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
         if (msg.chatId === currentChatId) {
           setMessages((prev) => {
             if (prev.some((m) => (m._id || m.id) === (msg._id || msg.id))) return prev
@@ -219,7 +219,7 @@ export default function ChatPage() {
 
     const handleMessagesDelivered = ({ chatId }) => {
       if (selectedPartner) {
-        const currentChatId = [currentUser.id, selectedPartner.id].sort().join('_')
+        const currentChatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
         if (chatId === currentChatId) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -234,7 +234,7 @@ export default function ChatPage() {
 
     const handleMessagesRead = ({ chatId }) => {
       if (selectedPartner) {
-        const currentChatId = [currentUser.id, selectedPartner.id].sort().join('_')
+        const currentChatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
         if (chatId === currentChatId) {
           setMessages((prev) =>
             prev.map((m) =>
@@ -269,7 +269,7 @@ export default function ChatPage() {
     setInputText('')
 
     try {
-      const chatId = [currentUser.id, partner.id].sort().join('_')
+      const chatId = partner.chatId || [currentUser.id, partner.id].sort().join('_')
       const messageHistory = await fetchMessages(chatId)
       setMessages(messageHistory)
       

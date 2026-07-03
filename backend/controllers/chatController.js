@@ -1,5 +1,6 @@
 import { User } from '../models/userModel.js'
 import { Message } from '../models/messageModel.js'
+import { Conversation } from '../models/conversationModel.js'
 import AppError from '../utils/AppError.js'
 import { isUserOnline } from '../services/socketService.js'
 
@@ -35,33 +36,22 @@ export async function getChatPartners(req, res, next) {
   try {
     const currentUserId = req.userId
 
-    // Find all messages involving the current user
-    const messages = await Message.find({
-      $or: [
-        { senderId: currentUserId },
-        { receiverId: currentUserId }
-      ]
-    }).sort({ createdAt: -1 })
+    // Find all conversations where the user is a participant
+    const conversations = await Conversation.find({
+      participants: currentUserId
+    }).populate('lastMessage')
 
-    const partnerIds = new Set()
-    const latestMessagesMap = new Map()
+    const result = await Promise.all(conversations.map(async (convo) => {
+      // Find the other participant in this 1-to-1 conversation
+      const partnerId = convo.participants.find(p => p.toString() !== currentUserId)
+      if (!partnerId) return null // Edge case: self-chat or group chats (handled later)
 
-    for (const msg of messages) {
-      const partnerId = msg.senderId === currentUserId ? msg.receiverId : msg.senderId
-      if (!partnerIds.has(partnerId)) {
-        partnerIds.add(partnerId)
-        latestMessagesMap.set(partnerId, msg)
-      }
-    }
+      const user = await User.findById(partnerId).select('email name image username lastSeen')
+      if (!user) return null
 
-    // Fetch user details for these partners
-    const partners = await User.find({ _id: { $in: Array.from(partnerIds) } }).select('email name image username lastSeen')
+      const chatId = convo._id.toString()
 
-    const result = await Promise.all(partners.map(async (user) => {
-      const partnerId = user._id.toString()
-      const latestMsg = latestMessagesMap.get(partnerId)
-      const chatId = [currentUserId, partnerId].sort().join('_')
-
+      // Count unread messages in this conversation sent to current user
       const unreadCount = await Message.countDocuments({
         chatId,
         receiverId: currentUserId,
@@ -69,36 +59,40 @@ export async function getChatPartners(req, res, next) {
       })
 
       return {
-        id: partnerId,
+        id: user._id.toString(),
+        chatId,
         name: user.name || '',
         email: user.email,
         image: user.image,
         username: user.username || user.name || 'User',
-        isOnline: isUserOnline(partnerId),
+        isOnline: isUserOnline(user._id.toString()),
         lastSeen: user.lastSeen,
         unreadCount,
-        latestMessage: latestMsg
+        latestMessage: convo.lastMessage
           ? {
-              id: latestMsg._id.toString(),
-              chatId: latestMsg.chatId,
-              text: latestMsg.text,
-              senderId: latestMsg.senderId,
-              receiverId: latestMsg.receiverId,
-              createdAt: latestMsg.createdAt,
-              status: latestMsg.status,
+              id: convo.lastMessage._id.toString(),
+              chatId: convo.lastMessage.chatId,
+              text: convo.lastMessage.text,
+              senderId: convo.lastMessage.senderId.toString(),
+              receiverId: convo.lastMessage.receiverId.toString(),
+              createdAt: convo.lastMessage.createdAt,
+              status: convo.lastMessage.status,
             }
           : null,
       }
     }))
 
+    // Filter out any null partners
+    const filteredResult = result.filter(Boolean)
+
     // Sort partners by the timestamp of their latest message in descending order
-    result.sort((a, b) => {
+    filteredResult.sort((a, b) => {
       const timeA = a.latestMessage ? new Date(a.latestMessage.createdAt).getTime() : 0
       const timeB = b.latestMessage ? new Date(b.latestMessage.createdAt).getTime() : 0
       return timeB - timeA
     })
 
-    res.json(result)
+    res.json(filteredResult)
   } catch (error) {
     next(error)
   }
@@ -123,9 +117,20 @@ export async function sendMsg(req, res, next) {
       throw new AppError('Recipient user not found', 404)
     }
 
-    // Generate unique chatId by sorting user IDs alphabetically
-    const chatId = [senderId, receiverId].sort().join('_')
+    // Find or create the conversation
+    let conversation = await Conversation.findOne({
+      isGroup: false,
+      participants: { $all: [senderId, receiverId], $size: 2 }
+    })
 
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [senderId, receiverId],
+        isGroup: false
+      })
+    }
+
+    const chatId = conversation._id.toString()
     const message = await Message.create({
       chatId,
       senderId,
@@ -133,6 +138,10 @@ export async function sendMsg(req, res, next) {
       text,
       status: isUserOnline(receiverId) ? 'delivered' : 'sent',
     })
+
+    // Update lastMessage on conversation
+    conversation.lastMessage = message._id
+    await conversation.save()
 
     res.status(201).json(message)
   } catch (error) {
@@ -149,17 +158,45 @@ export async function getMsgByChatid(req, res, next) {
     const { chatId } = req.params
     const currentUserId = req.userId
 
-    const participants = chatId.split('_')
-    if (!participants.includes(currentUserId)) {
-      throw new AppError('Unauthorized: You are not a participant in this chat thread', 403)
+    let targetChatId = chatId
+
+    if (chatId.includes('_')) {
+      // Fallback compatibility: look up by old dynamic ID format (split and find conversation)
+      const participants = chatId.split('_')
+      if (!participants.includes(currentUserId)) {
+        throw new AppError('Unauthorized: You are not a participant in this chat thread', 403)
+      }
+
+      // Check if there is an active conversation document for these participants
+      const conversation = await Conversation.findOne({
+        isGroup: false,
+        participants: { $all: participants, $size: 2 }
+      })
+
+      if (conversation) {
+        targetChatId = conversation._id.toString()
+      } else {
+        // Return empty message history if conversation hasn't been created yet
+        return res.json([])
+      }
+    } else {
+      // Standard mongoose conversationId
+      const conversation = await Conversation.findById(chatId)
+      if (!conversation) {
+        throw new AppError('Conversation thread not found', 404)
+      }
+
+      if (!conversation.participants.some(p => p.toString() === currentUserId)) {
+        throw new AppError('Unauthorized: You are not a participant in this chat thread', 403)
+      }
     }
 
     // Fetch messages sorted ascending by creation date
-    const messages = await Message.find({ chatId }).sort({ createdAt: 1 })
+    const messages = await Message.find({ chatId: targetChatId }).sort({ createdAt: 1 })
 
     // Mark messages sent to the current user in this chat as read
     await Message.updateMany(
-      { chatId, receiverId: currentUserId, status: { $ne: 'read' } },
+      { chatId: targetChatId, receiverId: currentUserId, status: { $ne: 'read' } },
       { $set: { status: 'read' } }
     )
 
