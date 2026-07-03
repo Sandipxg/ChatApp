@@ -34,22 +34,27 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] Socket.IO basics
-- [ ] Socket authentication
-- [ ] Session sharing
-- [ ] Online presence architecture
-- [ ] Heartbeat mechanism
-- [ ] Last Seen implementation
+- [x] HTTP vs WebSockets
+- [x] Polling / Long Polling / Server-Sent Events
+- [x] WebSocket lifecycle
+- [x] Socket.IO basics (events, reconnection)
+- [x] Socket authentication
+- [x] Session sharing (Better Auth → Socket)
+- [x] REST vs Socket responsibilities
+- [x] Online presence architecture
+- [x] Heartbeat mechanism
+- [x] Disconnect handling
+- [x] Last Seen implementation
 
 ## Build
 
-- [ ] Connect Better Auth session to React
+- [x] Connect Better Auth session to React
 - [ ] Profile picture upload
-- [ ] Connect Socket.IO after login
-- [ ] Store active socket connections
-- [ ] Show online users
-- [ ] Show offline users
-- [ ] Update last seen timestamps
+- [x] Connect Socket.IO after login
+- [x] Store active socket connections
+- [x] Show online users
+- [x] Show offline users
+- [x] Update Last Seen timestamps
 
 ---
 
@@ -57,53 +62,31 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-### WebSockets
-
-- [ ] HTTP vs WebSockets
-- [ ] Polling
-- [ ] Long Polling
-- [ ] Server Sent Events
-- [ ] WebSocket lifecycle
-
-### Socket.IO
-
-- [ ] Events
-- [ ] Rooms
-- [ ] Broadcasting
-- [ ] Acknowledgements
-- [ ] Reconnection
-- [ ] Socket middleware
-
-### Chat Architecture
-
-- [ ] Event-driven architecture
+- [ ] Conversation schema design
+- [x] Message schema design
+- [x] MongoDB indexes & pagination
+- [x] Socket.IO Rooms
+- [x] Socket.IO Broadcasting
+- [x] Socket.IO Acknowledgements
+- [x] Socket middleware
+- [x] Event-driven architecture
+- [x] Message lifecycle
 - [ ] Optimistic UI
-- [ ] Message lifecycle
-- [ ] REST vs Socket responsibilities
-
-### Database Design
-
-- [ ] Conversation schema
-- [ ] Message schema
-- [ ] Indexes
-- [ ] Pagination
 
 ## Build
 
 - [ ] Conversation schema
-- [ ] Message schema
+- [x] Message schema
 - [ ] Get conversation API
-- [ ] Get messages API
-- [ ] Socket.IO backend
-- [ ] Socket.IO frontend
-- [ ] Join conversation rooms
-- [ ] Send messages
-- [ ] Receive messages
-- [ ] Typing indicator
-- [ ] Read receipts
-- [ ] Delivered receipts
-- [ ] Last Seen
-- [ ] Online indicator
+- [x] Get messages API
+- [x] Socket.IO backend
+- [x] Socket.IO frontend
+- [x] Join conversation rooms
+- [x] Send messages
+- [x] Receive messages
+- [x] Typing indicator
+- [x] Delivered receipts
+- [x] Read receipts
 
 ---
 
