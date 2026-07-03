@@ -112,7 +112,7 @@ function SettingsPage() {
     presetTheme, setPresetTheme
   } = useContext(ThemeContext)
   
-  const { currentUser, logout, deleteAccount, updateReminderSettings } = useAuth()
+  const { currentUser, logout, deleteAccount, updateReminderSettings, updateUserImage } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   
@@ -136,6 +136,19 @@ function SettingsPage() {
   const [reminderLoading, setReminderLoading] = useState(false)
   const [reminderSuccess, setReminderSuccess] = useState("")
   const [reminderError, setReminderError] = useState("")
+
+  // Avatar upload states
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [avatarPreview, setAvatarPreview] = useState(currentUser?.image || "")
+  const [avatarLoading, setAvatarLoading] = useState(false)
+  const [avatarError, setAvatarError] = useState("")
+  const [avatarSuccess, setAvatarSuccess] = useState("")
+
+  useEffect(() => {
+    if (currentUser?.image) {
+      setAvatarPreview(currentUser.image)
+    }
+  }, [currentUser?.image])
 
   // Synchronize internal activeTab with parent layout router state clicks
   useEffect(() => {
@@ -227,6 +240,66 @@ function SettingsPage() {
       setPushError(err.message || 'Failed to trigger test push.')
     } finally {
       setPushLoading(false)
+    }
+  }
+
+  function handleAvatarChange(e) {
+    const file = e.target.files[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      setAvatarError("Please select a valid image file.")
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarError("File size exceeds 2MB limit.")
+      return
+    }
+
+    setAvatarFile(file)
+    setAvatarError("")
+    setAvatarSuccess("")
+
+    // Generate local preview URL
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  async function handleAvatarUpload(e) {
+    if (e) e.preventDefault()
+    if (!avatarFile) return
+
+    setAvatarLoading(true)
+    setAvatarError("")
+    setAvatarSuccess("")
+
+    const formData = new FormData()
+    formData.append("avatar", avatarFile)
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/user/avatar`, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      })
+
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to upload avatar.")
+      }
+
+      // Update state
+      updateUserImage(data.image)
+      setAvatarFile(null)
+      setAvatarSuccess("Profile picture updated successfully!")
+    } catch (err) {
+      setAvatarError(err.message || "An error occurred during upload.")
+    } finally {
+      setAvatarLoading(false)
     }
   }
 
@@ -622,7 +695,93 @@ function SettingsPage() {
 
           {/* ── 2D. ACCOUNT SECURITY TAB ── */}
           {activeTab === "account" && (
-            <div className="space-y-5 animate-slide-in">
+            <div className="space-y-6 animate-slide-in text-left">
+              
+              {/* Profile Card Section */}
+              <div>
+                <h2 className="text-xs font-extrabold text-text-body opacity-60 uppercase tracking-widest mb-1 select-none">Profile Settings</h2>
+                <p className="text-[11px] text-text-body opacity-50">Manage your profile picture and account information.</p>
+              </div>
+
+              <div className="bg-bg-card border border-border-app rounded-3xl p-6 space-y-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-center gap-6">
+                  
+                  {/* Avatar Upload Preview Container */}
+                  <div className="relative group flex-shrink-0">
+                    {avatarPreview ? (
+                      <img 
+                        src={avatarPreview} 
+                        alt="Profile Preview" 
+                        className="w-24 h-24 rounded-full object-cover border-4 border-bg-card shadow-md group-hover:opacity-90 transition-opacity" 
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-3xl border-4 border-bg-card shadow-md select-none">
+                        {currentUser?.username ? currentUser.username.charAt(0).toUpperCase() : '?'}
+                      </div>
+                    )}
+                    
+                    {/* Hover Camera Icon overlay */}
+                    <label 
+                      htmlFor="avatar-input"
+                      className="absolute inset-0 bg-black/40 hover:bg-black/50 text-white rounded-full flex flex-col items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0ZM18.75 10.5h.008v.008h-.008V10.5Z" />
+                      </svg>
+                      <span className="text-[10px] font-bold mt-1 uppercase tracking-wider">Change</span>
+                    </label>
+                  </div>
+
+                  {/* Right: Info & File Selector Info */}
+                  <div className="flex-1 text-center sm:text-left space-y-2">
+                    <p className="text-base font-bold text-text-title">{currentUser?.username}</p>
+                    <p className="text-xs text-text-body opacity-60">{currentUser?.email}</p>
+                    
+                    <div className="pt-1.5 flex flex-wrap gap-2 justify-center sm:justify-start">
+                      <input 
+                        type="file" 
+                        id="avatar-input" 
+                        accept="image/*" 
+                        onChange={handleAvatarChange}
+                        className="hidden" 
+                      />
+                      <label 
+                        htmlFor="avatar-input"
+                        className="inline-flex items-center justify-center bg-gray-100 hover:bg-gray-205 dark:bg-gray-800 dark:hover:bg-gray-750 text-text-title font-extrabold px-4.5 py-2.5 rounded-full text-[11px] tracking-wider transition-colors cursor-pointer select-none border border-border-app"
+                      >
+                        Choose Photo
+                      </label>
+
+                      {avatarFile && (
+                        <button
+                          onClick={handleAvatarUpload}
+                          disabled={avatarLoading}
+                          className="bg-accent hover:bg-accent/90 text-white font-extrabold px-5 py-2.5 rounded-full text-[11px] tracking-wider transition-all shadow-md shadow-accent/20 hover:shadow-accent/30 cursor-pointer disabled:opacity-50"
+                        >
+                          {avatarLoading ? "Uploading..." : "Save Image"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upload Status Alerts */}
+                {avatarError && (
+                  <p className="text-red-500 text-xs font-semibold bg-red-50 dark:bg-red-950/20 p-2.5 rounded-xl border border-red-105 dark:border-red-950/40">
+                    {avatarError}
+                  </p>
+                )}
+                {avatarSuccess && (
+                  <p className="text-green-500 text-xs font-semibold bg-green-50/50 dark:bg-emerald-950/10 p-2.5 rounded-xl border border-green-100/55 dark:border-emerald-950/30">
+                    {avatarSuccess}
+                  </p>
+                )}
+              </div>
+
+              {/* Separator Line */}
+              <hr className="border-border-app" />
+
               <div>
                 <h2 className="text-xs font-extrabold text-red-500 uppercase tracking-widest mb-1">Danger Zone</h2>
                 <p className="text-[11px] text-gray-400">These actions are permanent and cannot be undone.</p>

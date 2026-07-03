@@ -224,9 +224,13 @@ function AppLayout() {
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-2xl hover:bg-bg-app/80 transition-all cursor-pointer select-none group"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-accent/20 ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all">
-                  {firstLetter}
-                </div>
+                {currentUser.image ? (
+                  <img src={currentUser.image} alt={currentUser.username} className="w-8 h-8 rounded-full object-cover shadow-md ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-accent/20 ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all">
+                    {firstLetter}
+                  </div>
+                )}
                 <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
               </button>
 
@@ -234,9 +238,13 @@ function AppLayout() {
               {showUserMenu && (
                 <div className="absolute right-0 mt-2.5 w-52 bg-bg-card border border-border-app rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 z-50 animate-fade-up text-left overflow-hidden">
                   <div className="px-4 py-3 border-b border-border-app flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-accent/20 flex-shrink-0">
-                      {firstLetter}
-                    </div>
+                    {currentUser.image ? (
+                      <img src={currentUser.image} alt={currentUser.username} className="w-9 h-9 rounded-full object-cover shadow-md flex-shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-accent/20 flex-shrink-0">
+                        {firstLetter}
+                      </div>
+                    )}
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-text-title truncate">{currentUser.username}</p>
                       <p className="text-[10px] text-text-body opacity-60 font-medium truncate mt-0.5">{currentUser.email || 'Logged in'}</p>

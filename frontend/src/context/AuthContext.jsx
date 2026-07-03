@@ -21,6 +21,7 @@ export function AuthProvider({ children }) {
           username: session.user.username || session.user.name || "",
           reminderTime: session.user.reminderTime,
           timezone: session.user.timezone,
+          image: session.user.image || "",
         })
       } else {
         setCurrentUser(null)
@@ -48,6 +49,7 @@ export function AuthProvider({ children }) {
         username: data.user.username || data.user.name || "",
         reminderTime: data.user.reminderTime,
         timezone: data.user.timezone,
+        image: data.user.image || "",
       })
     }
   }
@@ -69,6 +71,7 @@ export function AuthProvider({ children }) {
         username: data.user.username || data.user.name || "",
         reminderTime: data.user.reminderTime,
         timezone: data.user.timezone,
+        image: data.user.image || "",
       })
     }
   }
@@ -116,8 +119,12 @@ export function AuthProvider({ children }) {
     return updatedUser
   }
 
+  function updateUserImage(imageUrl) {
+    setCurrentUser(prev => prev ? { ...prev, image: imageUrl } : null)
+  }
+
   return (
-    <AuthContext.Provider value={{ currentUser, loading, signup, login, logout, deleteAccount, updateReminderSettings }}>
+    <AuthContext.Provider value={{ currentUser, loading, signup, login, logout, deleteAccount, updateReminderSettings, updateUserImage }}>
       {loading ? (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
           <div className="w-12 h-12 border-4 border-purple-200 dark:border-purple-900 border-t-purple-600 dark:border-t-purple-400 rounded-full animate-spin"></div>

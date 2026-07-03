@@ -12,6 +12,7 @@ import * as authController from './controllers/authController.js'
 import authMiddleware from './middleware/auth.js'
 import pushRoutes from './routes/push.js'
 import chatRoutes from './routes/chat.js'
+import userRoutes from './routes/user.js'
 import { notFound, errorHandler } from './middleware/errorHandler.js'
 
 // Since swagger.json is a JSON file, using createRequire is the standard ESM way to import JSON
@@ -82,6 +83,7 @@ app.use(cookieParser())
 
 app.use('/api/push', pushRoutes)
 app.use('/api/chat', chatRoutes)
+app.use('/api/user', userRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
