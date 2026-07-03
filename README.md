@@ -7,6 +7,7 @@ Welcome to **ChatApp**, a real-time web messaging platform featuring an upgraded
 ## ✨ Features
 
 - 🔒 **Secure Auth**: Seamless Email & Password login/signup alongside Google & GitHub OAuth integrations powered by Better Auth.
+- 🖼️ **Profile Picture Upload**: Upload and edit avatars using a secure backend parser (Multer) with permanent storage hosted on Cloudinary CDN.
 - 🎨 **Premium Glassmorphic UI**: High-end frosted glass layout, soft typography, smooth micro-animations, and customizable themes (Light/Dark/System).
 - 🖼️ **Personalized Accent Colors & Wallpapers**: Switch colors and gradient/image backdrops dynamically in real-time.
 - 🔔 **Push Notifications & Reminders**: Opt-in to receive desktop push notifications and set daily message reminders with custom timezones.
@@ -24,6 +25,7 @@ Welcome to **ChatApp**, a real-time web messaging platform featuring an upgraded
 ### Backend
 - **Framework**: Express (Node.js)
 - **Database**: MongoDB (Mongoose ORM)
+- **Media Storage**: Cloudinary (SDK Integration) + Multer (for multi-part file parsing)
 - **Auth Provider**: Better Auth (with MongoDB adapter & username plugins)
 - **Security Middleware**: CORS, Rate Limiting, Helmet
 
@@ -54,6 +56,11 @@ Welcome to **ChatApp**, a real-time web messaging platform featuring an upgraded
    GOOGLE_CLIENT_SECRET=your_google_client_secret
    GITHUB_CLIENT_ID=your_github_client_id
    GITHUB_CLIENT_SECRET=your_github_client_secret
+
+   # Cloudinary Keys (Optional, falls back to mock images if left empty)
+   CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+   CLOUDINARY_API_KEY=your_cloudinary_api_key
+   CLOUDINARY_API_SECRET=your_cloudinary_api_secret
    ```
 4. Run the development server:
    ```bash
