@@ -49,7 +49,7 @@ This document tracks both the concepts to learn and the implementation progress 
 ## Build
 
 - [x] Connect Better Auth session to React
-- [x] Profile picture upload ( using Cloudinary )
+- [ ] Profile picture upload ( using Cloudinary )
 - [x] Connect Socket.IO after login
 - [x] Store active socket connections
 - [x] Show online users
@@ -64,20 +64,20 @@ This document tracks both the concepts to learn and the implementation progress 
 
 - [x] Conversation schema design
 - [x] Message schema design
-- [x] MongoDB indexes & pagination
+- [ ] MongoDB indexes & pagination
 - [x] Socket.IO Rooms
-- [x] Socket.IO Broadcasting
-- [x] Socket.IO Acknowledgements
+- [ ] Socket.IO Broadcasting
+- [ ] Socket.IO Acknowledgements
 - [x] Socket middleware
-- [x] Event-driven architecture
-- [x] Message lifecycle
+- [ ] Event-driven architecture
+- [ ] Message lifecycle
 
 ## Build
 
 - [x] Conversation schema
 - [x] Message schema
-- [x] Get conversation API
-- [x] Get messages API
+- [ ] Get conversation API
+- [ ] Get messages API
 - [x] Socket.IO backend
 - [x] Socket.IO frontend
 - [x] Join conversation rooms

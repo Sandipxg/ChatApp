@@ -28,3 +28,61 @@ We introduced a permanent **`Conversation` Schema** to separate the message stre
    If a user has 100,000 messages across 5 active chats, the server now only fetches 5 conversation documents, avoiding the messages scan completely.
 3. **Optimized Write-Flow**: When a new message is sent, the backend finds or creates the conversation document, saves the message referencing the conversation ID as the `chatId`, and updates the conversation's `lastMessage` pointer.
 4. **Backward Compatibility**: Implemented a fallback parser on the backend so that messages using the legacy dynamic `userIdA_userIdB` format are resolved, grouped, and migrated to conversation records seamlessly without breaking existing history.
+
+---
+
+## Problem 2: Untyped Message Schema, No Query Indexes, and Rigid 1-to-1 Design
+
+### Description
+Initially, the `Message` schema stored reference keys (`chatId`, `senderId`, `receiverId`) as plain `String` types rather than Mongoose `ObjectId` references. Additionally, it lacked compound indexes for chronological queries and had no support for media attachments or group chat read receipts.
+
+### Schema Comparison (Old vs. New)
+
+```javascript
+// --- OLD SCHEMA SNIPPET ---
+chatId: { type: String, required: true, index: true },
+senderId: { type: String, required: true, index: true },
+receiverId: { type: String, required: true, index: true },
+text: { type: String, required: true, trim: true },
+status: { type: String, enum: ['sent', 'delivered', 'read'], default: 'sent', index: true }
+```
+
+```javascript
+// --- NEW SCHEMA SNIPPET ---
+chatId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', required: true },
+senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+text: { type: String, required: false, trim: true },
+messageType: { type: String, enum: ['text', 'image', 'video', 'audio', 'file', 'system'], default: 'text' },
+fileAttachment: {
+  url: { type: String, default: null },
+  name: { type: String, default: null },
+  size: { type: Number, default: null },
+  mimeType: { type: String, default: null }
+},
+status: { type: String, enum: ['sent', 'delivered', 'read'], default: 'sent', index: true },
+readBy: [{
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  readAt: { type: Date, default: Date.now }
+}]
+```
+
+### Issue with Old Schema
+1. **Lack of Referential Integrity**: Storing IDs as raw strings prevented Mongoose from validating if messages belonged to existing conversations or users, making database joins (`.populate()`) impossible.
+2. **In-Memory Sort Bottlenecks**: Message history was retrieved via `Message.find({ chatId }).sort({ createdAt: 1 })`. Without a compound index, MongoDB was forced to scan all messages in a chat and sort them in RAM, leading to performance degradation on larger conversations.
+3. **Inflexible Schema**: Storing messages as text-only and requiring a single `receiverId` made it impossible to support group chats (which have multiple receivers) or file/voice attachments.
+
+### Solution Details
+We redesigned and refactored the Message Schema:
+1. **Strongly-Typed References**: Changed references to Mongoose `ObjectId` types pointing to the `Conversation` and `User` collections.
+   * **How it works**:
+     * `ObjectId` stores the ID of another document (e.g., a user), and `ref: "User"` tells Mongoose **which collection** that ID belongs to.
+     * The message document itself stores only the `senderId` and `receiverId`, not the user's full details.
+     * Without `.populate()`, we would have to manually query the `User` collection using `User.findById(message.senderId)`.
+     * Calling `.populate("senderId")` automatically performs that extra query behind the scenes, replacing the `senderId` field in the returned result with the corresponding User document (or selected fields like `name` and `image`).
+     * This **does not change the data stored in MongoDB**—it only changes the object returned to your application.
+2. **Compound Index**: Created an index on `{ chatId: 1, createdAt: 1 }` so message lookups and chronological rendering are handled directly by the index on disk without sorting.
+3. **Group & Media Extensibility**:
+   * Set `receiverId` as optional (nullable) to support group conversations.
+   * Introduced `messageType` and a `fileAttachment` object structure for future media uploads.
+   * Added a `readBy` array containing reader IDs and read timestamps to track read receipts across group participants, while preserving the lightweight 1-to-1 status logic.

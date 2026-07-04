@@ -214,9 +214,9 @@ async function deliverOfflineMessages(receiverId) {
 
     // Notify each sender that their messages were delivered
     for (const msg of unsentMessages) {
-      io.to(msg.senderId).emit('messages_delivered', {
+      io.to(msg.senderId.toString()).emit('messages_delivered', {
         receiverId,
-        chatId: msg.chatId
+        chatId: msg.chatId.toString()
       })
     }
   } catch (err) {

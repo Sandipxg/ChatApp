@@ -71,7 +71,7 @@ export async function getChatPartners(req, res, next) {
         latestMessage: convo.lastMessage
           ? {
               id: convo.lastMessage._id.toString(),
-              chatId: convo.lastMessage.chatId,
+              chatId: convo.lastMessage.chatId.toString(),
               text: convo.lastMessage.text,
               senderId: convo.lastMessage.senderId.toString(),
               receiverId: convo.lastMessage.receiverId.toString(),
