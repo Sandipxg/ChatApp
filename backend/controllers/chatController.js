@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { User } from '../models/userModel.js'
 import { Message } from '../models/messageModel.js'
 import { Conversation } from '../models/conversationModel.js'
@@ -157,6 +158,10 @@ export async function getMsgByChatid(req, res, next) {
   try {
     const { chatId } = req.params
     const currentUserId = req.userId
+    const { cursor, limit = 20 } = req.query
+
+    // Validate limit (default 20, clamp between 1 and 100)
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)
 
     let targetChatId = chatId
 
@@ -191,8 +196,19 @@ export async function getMsgByChatid(req, res, next) {
       }
     }
 
-    // Fetch messages sorted ascending by creation date
-    const messages = await Message.find({ chatId: targetChatId }).sort({ createdAt: 1 })
+    // Build keyset pagination query
+    const query = { chatId: targetChatId }
+    if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
+      query._id = { $lt: cursor }
+    }
+
+    // Fetch messages in reverse chronological order (newest first)
+    const messages = await Message.find(query)
+      .sort({ _id: -1 })
+      .limit(parsedLimit)
+
+    // Reverse documents in memory so that the final returned array is chronological (oldest first)
+    messages.reverse()
 
     // Mark messages sent to the current user in this chat as read
     await Message.updateMany(

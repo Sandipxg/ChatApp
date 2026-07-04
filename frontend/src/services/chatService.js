@@ -18,8 +18,12 @@ export async function fetchPartners() {
   return res.json()
 }
 
-export async function fetchMessages(chatId) {
-  const res = await fetch(`${BASE_URL}/messages/${chatId}`, { credentials: 'include' })
+export async function fetchMessages(chatId, cursor = null, limit = 20) {
+  let url = `${BASE_URL}/messages/${chatId}?limit=${limit}`
+  if (cursor) {
+    url += `&cursor=${encodeURIComponent(cursor)}`
+  }
+  const res = await fetch(url, { credentials: 'include' })
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
     throw new Error(errorData.error || 'Failed to fetch messages')

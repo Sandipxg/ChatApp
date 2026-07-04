@@ -86,3 +86,27 @@ We redesigned and refactored the Message Schema:
    * Set `receiverId` as optional (nullable) to support group conversations.
    * Introduced `messageType` and a `fileAttachment` object structure for future media uploads.
    * Added a `readBy` array containing reader IDs and read timestamps to track read receipts across group participants, while preserving the lightweight 1-to-1 status logic.
+
+---
+
+## Problem 3: Scalability and Boundary Issues with Offset Pagination
+
+### Description
+The message history API initially returned the entire chat history in a single fetch. When implementing pagination, choosing offset-based pagination (`skip` and `limit`) would have introduced database query performance issues and UI rendering bugs.
+
+### Issue with Offset Pagination
+1. **$O(N)$ Database Performance**: Using `.skip(1000)` forces MongoDB to read 1,000 documents from disk into memory and discard them just to return the next 20. As chat history grows, retrieving older pages becomes increasingly slow.
+2. **Page-Boundary Drift (The "Moving Goalpost" Bug)**: 
+   * `skip()` pagination is unreliable for chats because new incoming messages change the positions of older messages.
+   * This causes the **"moving goalpost" bug**, where loading the next page can return duplicate or missing messages to the user.
+
+### Solution (Keyset Cursor Pagination)
+We implemented cursor-based pagination using the message ID:
+1. **Constant $O(1)$ Performance**: 
+   * Chat messages are always fetched with **sorting** (`.sort({ _id: -1 })`) so the newest messages appear first.
+   * `.limit(20)` returns only the first 20 messages **after sorting**.
+   * By querying messages older than the oldest visible message ID (`{ _id: { $lt: oldestMessageId } }`) combined with the compound index `{ chatId: 1, _id: -1 }`, MongoDB jumps directly to the cursor position and reads only the requested slice of documents.
+2. **Stable Query Boundaries**: 
+   * **Cursor pagination** solves the moving goalpost bug by fetching messages **older than a specific message** (using the unique `_id` cursor) instead of skipping a number of records.
+   * Since a message's `_id` never changes, the cursor remains stable even when new messages arrive.
+

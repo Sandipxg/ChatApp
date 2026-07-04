@@ -57,8 +57,9 @@ const messageSchema = new mongoose.Schema(
   }
 )
 
-// Compound index for optimized chat history retrieval
+// Compound indexes for optimized chat history retrieval & cursor pagination
 messageSchema.index({ chatId: 1, createdAt: 1 })
+messageSchema.index({ chatId: 1, _id: -1 })
 
 // Individual indexes for query performance
 messageSchema.index({ senderId: 1 })

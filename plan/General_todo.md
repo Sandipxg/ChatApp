@@ -64,7 +64,7 @@ This document tracks both the concepts to learn and the implementation progress 
 
 - [x] Conversation schema design
 - [x] Message schema design
-- [ ] MongoDB indexes & pagination
+- [x] MongoDB indexes & pagination
 - [x] Socket.IO Rooms
 - [ ] Socket.IO Broadcasting
 - [ ] Socket.IO Acknowledgements
@@ -77,7 +77,7 @@ This document tracks both the concepts to learn and the implementation progress 
 - [x] Conversation schema
 - [x] Message schema
 - [ ] Get conversation API
-- [ ] Get messages API
+- [x] Get messages API
 - [x] Socket.IO backend
 - [x] Socket.IO frontend
 - [x] Join conversation rooms
