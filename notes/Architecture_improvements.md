@@ -110,3 +110,22 @@ We implemented cursor-based pagination using the message ID:
    * **Cursor pagination** solves the moving goalpost bug by fetching messages **older than a specific message** (using the unique `_id` cursor) instead of skipping a number of records.
    * Since a message's `_id` never changes, the cursor remains stable even when new messages arrive.
 
+### Visualizing the "Moving Goalpost" Bug
+
+1. **Initial State (Newest First)**: Database has messages `[989, 988, 987, 986, 985, 984, ...]`.
+   * User loads Page 1 (`limit: 5`, `skip: 0`) -> returns `[989, 988, 987, 986, 985]`.
+2. **Two New Messages Arrive**: Messages `991, 990` are added at the top.
+   * Database becomes `[991, 990, 989, 988, 987, 986, 985, 984, ...]`. Old items shift down by 2.
+3. **User Scrolls to Page 2** (`limit: 5`, `skip: 5`):
+   * MongoDB skips the first 5 (`991-987`) and returns `[986, 985, 984, 983, 982]`.
+   * **The Bug**: User sees `986` and `985` again (duplicates) because the skip boundary shifted.
+
+### The Cursor Solution
+Instead of skipping, we query for messages older than the oldest visible message (`985`):
+```javascript
+Message.find({ _id: { $lt: oldestVisibleId } }) // oldestVisibleId = 985
+  .sort({ _id: -1 })
+  .limit(5)
+```
+* Returns `[984, 983, 982, 981, 980]`. No duplicates or gaps, regardless of new arrivals.
+
