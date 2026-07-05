@@ -129,3 +129,12 @@ Message.find({ _id: { $lt: oldestVisibleId } }) // oldestVisibleId = 985
 ```
 * Returns `[984, 983, 982, 981, 980]`. No duplicates or gaps, regardless of new arrivals.
 
+---
+
+## Problem 4: Horizontal Scaling Limitation of Default Socket.IO Adapter
+
+<span style="color:red">**Note: This architecture improvement will be implemented later when scaling the application horizontally.**</span>
+
+For full technical specifications, architecture diagrams, and the Redis Pub/Sub coordination walkthrough, see:
+*   [socketioBroadcasting.md](./socketioBroadcasting.md)
+
