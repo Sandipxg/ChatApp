@@ -23,18 +23,25 @@ When scaling an application horizontally to handle higher concurrent traffic, yo
 
 ```mermaid
 graph TD
-    UserA[User A / Alice] -->|TCP Connection 1| Server1[Server 1]
-    UserB[User B / Bob] -->|TCP Connection 2| Server2[Server 2]
-    
-    subgraph RAM Server 1
-        S1["socketMap: { 'Alice': socket_id_1 }"]
+    subgraph S1 [Server 1 Instance]
+        Server1[Server 1 Process]
+        RAM1["RAM Map: { 'Alice': socket_id_1 }"]
+        Server1 --- RAM1
     end
 
-    subgraph RAM Server 2
-        S2["socketMap: { 'Bob': socket_id_2 }"]
+    subgraph S2 [Server 2 Instance]
+        Server2[Server 2 Process]
+        RAM2["RAM Map: { 'Bob': socket_id_2 }"]
+        Server2 --- RAM2
     end
-    
-    Server1 -. "Isolated Process Memory" .- Server2
+
+    Alice[User A / Alice] ==>|TCP Conn 1| Server1
+    Bob[User B / Bob] ==>|TCP Conn 2| Server2
+
+    Server1 -.->|1. Lookup Bob's Socket| RAM1
+    RAM1 -.->|2. Not Found!| Fail[X Message Dropped]
+
+    Server1 -. "Isolated Processes (Separate RAM)" .- Server2
 ```
 
 ### Why it breaks:
