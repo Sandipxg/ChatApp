@@ -221,3 +221,46 @@ export async function getMsgByChatid(req, res, next) {
     next(error)
   }
 }
+
+/**
+ * Fetches or creates a 1-to-1 conversation between the logged-in user and a partner.
+ */
+export async function getOrCreateConversation(req, res, next) {
+  try {
+    const currentUserId = req.userId
+    const { partnerId } = req.params
+
+    if (!partnerId || !mongoose.Types.ObjectId.isValid(partnerId)) {
+      throw new AppError('Invalid partner ID', 400)
+    }
+
+    // Verify recipient user exists
+    const partnerExists = await User.exists({ _id: partnerId })
+    if (!partnerExists) {
+      throw new AppError('Partner user not found', 404)
+    }
+
+    // Find existing conversation
+    let conversation = await Conversation.findOne({
+      isGroup: false,
+      participants: { $all: [currentUserId, partnerId], $size: 2 }
+    }).populate('lastMessage')
+
+    // If it doesn't exist, create it
+    if (!conversation) {
+      conversation = await Conversation.create({
+        participants: [currentUserId, partnerId],
+        isGroup: false
+      })
+    }
+
+    res.json({
+      chatId: conversation._id.toString(),
+      isGroup: conversation.isGroup,
+      participants: conversation.participants,
+      lastMessage: conversation.lastMessage
+    })
+  } catch (error) {
+    next(error)
+  }
+}

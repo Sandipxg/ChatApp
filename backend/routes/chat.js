@@ -13,6 +13,9 @@ router.get('/contacts', chatController.getContacts)
 // Get chat partners (users with conversation history)
 router.get('/partners', chatController.getChatPartners)
 
+// Get or create conversation with a specific partner
+router.get('/conversations/:partnerId', chatController.getOrCreateConversation)
+
 // Send a message
 router.post('/messages', chatController.sendMsg)
 

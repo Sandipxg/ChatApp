@@ -69,14 +69,14 @@ This document tracks both the concepts to learn and the implementation progress 
 - [x] Socket.IO Broadcasting
 - [x] Socket.IO Acknowledgements
 - [x] Socket middleware
-- [ ] Event-driven architecture
-- [ ] Message lifecycle
+- [x] Event-driven architecture
+- [x] Message lifecycle
 
 ## Build
 
 - [x] Conversation schema
 - [x] Message schema
-- [ ] Get conversation API
+- [x] Get conversation API
 - [x] Get messages API
 - [x] Socket.IO backend
 - [x] Socket.IO frontend
