@@ -75,25 +75,37 @@ When a message is published, Redis loops through the list of active TCP sockets 
 
 Here is the exact data path when Alice sends a message to Bob in a multi-server setup:
 
-```mermaid
-sequenceDiagram
-    actor Alice as Alice (Client)
-    participant S1 as Server 1
-    participant Redis as Redis Broker
-    participant S2 as Server 2
-    actor Bob as Bob (Client)
-
-    Alice->>S1: 1. Websocket Frame (send_message to "Bob_Room")
-    Note over S1: 2. Persists message in MongoDB
-    Note over S1: 3. Realizes Bob is not in local RAM Map
-    S1->>Redis: 4. PUBLISH socket.io#/# [MessagePack Data]
-    
-    Note over Redis: 5. Fan-out payload to all subscribed server TCP connections
-    Redis->>S1: (Ignored - Alice's socket already processed)
-    Redis->>S2: 6. Push MessagePack Payload
-    
-    Note over S2: 7. Decodes payload & finds "Bob_Room" in local Map
-    S2->>Bob: 8. Websocket Frame (new_message event)
+```text
+[Alice]
+  │ 1. "send_message" (target: Bob)
+  ▼
+┌────────────────────────┐
+│        SERVER 1        │
+│                        │
+│ 2. Save msg to MongoDB │
+│ 3. Check local RAM Map │  <--- (Bob is not here!)
+│ 4. Redis PUBLISH       │
+└──────────┬─────────────┘
+           │
+           │ MessagePack buffer containing:
+           │ { room: "Bob_Room", event: "new_message", payload: "Hi" }
+           ▼
+┌────────────────────────┐
+│      REDIS BROKER      │  <--- (Fans out message to all servers)
+└──────────┬─────────────┘
+           │
+           ├──────────────────────────────┐
+           ▼ (Ignored - no Bob)           ▼ (Action taken!)
+┌────────────────────────┐       ┌────────────────────────┐
+│        SERVER 1        │       │        SERVER 2        │
+│                        │       │                        │
+│ 5. Receives from Redis │       │ 5. Receives from Redis │
+│ 6. Bob in local Map?   │       │ 6. Bob in local Map?   │ <--- (Yes!)
+│    No -> Discard       │       │ 7. Write to TCP Socket │
+└────────────────────────┘       └──────────┬─────────────┘
+                                            │
+                                            ▼ 8. [WebSocket Frame]
+                                          [Bob]
 ```
 
 ---
