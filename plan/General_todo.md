@@ -67,7 +67,7 @@ This document tracks both the concepts to learn and the implementation progress 
 - [x] MongoDB indexes & pagination
 - [x] Socket.IO Rooms
 - [x] Socket.IO Broadcasting
-- [ ] Socket.IO Acknowledgements
+- [x] Socket.IO Acknowledgements
 - [x] Socket middleware
 - [ ] Event-driven architecture
 - [ ] Message lifecycle

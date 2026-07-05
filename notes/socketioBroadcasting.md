@@ -34,7 +34,7 @@ graph TD
         S2["socketMap: { 'Bob': socket_id_2 }"]
     end
     
-    Server1 -.- x|Isolated Process Memory| Server2
+    Server1 -. "Isolated Process Memory" .- Server2
 ```
 
 ### Why it breaks:
