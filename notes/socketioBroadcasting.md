@@ -21,27 +21,10 @@ When scaling an application horizontally to handle higher concurrent traffic, yo
 
 ### The Problem Architecture
 
-```mermaid
-graph TD
-    subgraph S1 [Server 1 Instance]
-        Server1[Server 1 Process]
-        RAM1["RAM Map: { 'Alice': socket_id_1 }"]
-        Server1 --- RAM1
-    end
-
-    subgraph S2 [Server 2 Instance]
-        Server2[Server 2 Process]
-        RAM2["RAM Map: { 'Bob': socket_id_2 }"]
-        Server2 --- RAM2
-    end
-
-    Alice[User A / Alice] ==>|TCP Conn 1| Server1
-    Bob[User B / Bob] ==>|TCP Conn 2| Server2
-
-    Server1 -.->|1. Lookup Bob's Socket| RAM1
-    RAM1 -.->|2. Not Found!| Fail[X Message Dropped]
-
-    Server1 -. "Isolated Processes (Separate RAM)" .- Server2
+```text
+Alice ──► [Server 1 (RAM: Alice Only)] ───X (Bob is not here! Message Lost)
+                     [Isolated RAM]
+Bob   ──► [Server 2 (RAM: Bob Only)]
 ```
 
 ### Why it breaks:
