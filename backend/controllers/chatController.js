@@ -39,14 +39,51 @@ export async function getChatPartners(req, res, next) {
 
     // Find all conversations where the user is a participant
     const conversations = await Conversation.find({
-      participants: currentUserId
+      'members.userId': currentUserId
     }).populate('lastMessage')
 
     const result = await Promise.all(conversations.map(async (convo) => {
-      // Find the other participant in this 1-to-1 conversation
-      const partnerId = convo.participants.find(p => p.toString() !== currentUserId)
-      if (!partnerId) return null // Edge case: self-chat or group chats (handled later)
+      if (convo.isGroup) {
+        const unreadCount = await Message.countDocuments({
+          chatId: convo._id,
+          senderId: { $ne: currentUserId },
+          'readBy.userId': { $ne: currentUserId }
+        })
 
+        const memberInfo = convo.members.find(m => m.userId.toString() === currentUserId)
+        const myRole = memberInfo ? memberInfo.role : 'member'
+
+        return {
+          id: convo._id.toString(),
+          chatId: convo._id.toString(),
+          name: convo.name || 'Group Chat',
+          email: `${convo.members.length} members`,
+          image: convo.avatar,
+          username: convo.name || 'Group Chat',
+          isGroup: true,
+          isOnline: false,
+          unreadCount,
+          myRole,
+          members: convo.members,
+          latestMessage: convo.lastMessage
+            ? {
+                id: convo.lastMessage._id.toString(),
+                chatId: convo.lastMessage.chatId.toString(),
+                text: convo.lastMessage.text,
+                senderId: convo.lastMessage.senderId.toString(),
+                receiverId: convo.lastMessage.receiverId ? convo.lastMessage.receiverId.toString() : null,
+                createdAt: convo.lastMessage.createdAt,
+                status: convo.lastMessage.status,
+              }
+            : null,
+        }
+      }
+
+      // Find the other participant in this 1-to-1 conversation
+      const partnerMember = convo.members.find(m => m.userId.toString() !== currentUserId)
+      if (!partnerMember) return null
+
+      const partnerId = partnerMember.userId
       const user = await User.findById(partnerId).select('email name image username lastSeen')
       if (!user) return null
 
@@ -75,7 +112,7 @@ export async function getChatPartners(req, res, next) {
               chatId: convo.lastMessage.chatId.toString(),
               text: convo.lastMessage.text,
               senderId: convo.lastMessage.senderId.toString(),
-              receiverId: convo.lastMessage.receiverId.toString(),
+              receiverId: convo.lastMessage.receiverId ? convo.lastMessage.receiverId.toString() : null,
               createdAt: convo.lastMessage.createdAt,
               status: convo.lastMessage.status,
             }
@@ -121,13 +158,17 @@ export async function sendMsg(req, res, next) {
     // Find or create the conversation
     let conversation = await Conversation.findOne({
       isGroup: false,
-      participants: { $all: [senderId, receiverId], $size: 2 }
+      'members.userId': { $all: [senderId, receiverId] },
+      members: { $size: 2 }
     })
 
     if (!conversation) {
       conversation = await Conversation.create({
-        participants: [senderId, receiverId],
-        isGroup: false
+        isGroup: false,
+        members: [
+          { userId: senderId, role: 'member' },
+          { userId: receiverId, role: 'member' }
+        ]
       })
     }
 
@@ -164,6 +205,7 @@ export async function getMsgByChatid(req, res, next) {
     const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100)
 
     let targetChatId = chatId
+    let conversation = null
 
     if (chatId.includes('_')) {
       // Fallback compatibility: look up by old dynamic ID format (split and find conversation)
@@ -173,9 +215,10 @@ export async function getMsgByChatid(req, res, next) {
       }
 
       // Check if there is an active conversation document for these participants
-      const conversation = await Conversation.findOne({
+      conversation = await Conversation.findOne({
         isGroup: false,
-        participants: { $all: participants, $size: 2 }
+        'members.userId': { $all: participants },
+        members: { $size: 2 }
       })
 
       if (conversation) {
@@ -186,12 +229,12 @@ export async function getMsgByChatid(req, res, next) {
       }
     } else {
       // Standard mongoose conversationId
-      const conversation = await Conversation.findById(chatId)
+      conversation = await Conversation.findById(chatId)
       if (!conversation) {
         throw new AppError('Conversation thread not found', 404)
       }
 
-      if (!conversation.participants.some(p => p.toString() === currentUserId)) {
+      if (!conversation.members.some(m => m.userId.toString() === currentUserId)) {
         throw new AppError('Unauthorized: You are not a participant in this chat thread', 403)
       }
     }
@@ -211,10 +254,21 @@ export async function getMsgByChatid(req, res, next) {
     messages.reverse()
 
     // Mark messages sent to the current user in this chat as read
-    await Message.updateMany(
-      { chatId: targetChatId, receiverId: currentUserId, status: { $ne: 'read' } },
-      { $set: { status: 'read' } }
-    )
+    if (conversation.isGroup) {
+      await Message.updateMany(
+        {
+          chatId: targetChatId,
+          senderId: { $ne: currentUserId },
+          'readBy.userId': { $ne: currentUserId }
+        },
+        { $addToSet: { readBy: { userId: currentUserId, readAt: new Date() } } }
+      )
+    } else {
+      await Message.updateMany(
+        { chatId: targetChatId, receiverId: currentUserId, status: { $ne: 'read' } },
+        { $set: { status: 'read' } }
+      )
+    }
 
     res.json(messages)
   } catch (error) {
@@ -243,21 +297,25 @@ export async function getOrCreateConversation(req, res, next) {
     // Find existing conversation
     let conversation = await Conversation.findOne({
       isGroup: false,
-      participants: { $all: [currentUserId, partnerId], $size: 2 }
+      'members.userId': { $all: [currentUserId, partnerId] },
+      members: { $size: 2 }
     }).populate('lastMessage')
 
     // If it doesn't exist, create it
     if (!conversation) {
       conversation = await Conversation.create({
-        participants: [currentUserId, partnerId],
-        isGroup: false
+        isGroup: false,
+        members: [
+          { userId: currentUserId, role: 'member' },
+          { userId: partnerId, role: 'member' }
+        ]
       })
     }
 
     res.json({
       chatId: conversation._id.toString(),
       isGroup: conversation.isGroup,
-      participants: conversation.participants,
+      participants: conversation.members.map(m => m.userId),
       lastMessage: conversation.lastMessage
     })
   } catch (error) {

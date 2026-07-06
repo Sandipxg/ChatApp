@@ -1,12 +1,28 @@
 import mongoose from 'mongoose'
 
-const conversationSchema = new mongoose.Schema(
+const memberSchema = new mongoose.Schema(
   {
-    participants: [{
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      index: true,
-    }],
+      required: true,
+    },
+    role: {
+      type: String,
+      enum: ['owner', 'admin', 'member'],
+      default: 'member',
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+)
+
+const conversationSchema = new mongoose.Schema(
+  {
+    members: [memberSchema],
     isGroup: {
       type: Boolean,
       default: false,

@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { Server } from 'socket.io'
 import { auth } from '../config/auth.js'
 import { User } from '../models/userModel.js'
@@ -61,6 +62,15 @@ export function init(server) {
     // Join a private room unique to this user ID
     socket.join(userId)
 
+    // Fetch and join all group conversation rooms for the user
+    Conversation.find({ 'members.userId': userId })
+      .then((convoList) => {
+        convoList.forEach((convo) => {
+          socket.join(convo._id.toString())
+        })
+      })
+      .catch((err) => console.error('Error auto-joining conversation rooms:', err))
+
     // Broadcast online status if this is the user's first socket (tab)
     if (activeConnections.get(userId).size === 1) {
       io.emit('user_online', { userId })
@@ -69,6 +79,15 @@ export function init(server) {
 
     // Send the current list of online user IDs to the connected client
     socket.emit('online_users', Array.from(activeConnections.keys()))
+
+    // Support dynamic room joining on UI creation/update
+    socket.on('join_group_rooms', (chatIds = []) => {
+      chatIds.forEach((chatId) => {
+        if (mongoose.Types.ObjectId.isValid(chatId)) {
+          socket.join(chatId)
+        }
+      })
+    })
 
     // Handle incoming message sent via WebSocket
     socket.on('send_message', async (payload, callback) => {
@@ -79,36 +98,57 @@ export function init(server) {
           return
         }
 
-        // Find or create the conversation
-        let conversation = await Conversation.findOne({
-          isGroup: false,
-          participants: { $all: [userId, receiverId], $size: 2 }
-        })
+        let chatId = null
+        let conversation = null
+        let isGroup = false
 
-        if (!conversation) {
-          conversation = await Conversation.create({
-            participants: [userId, receiverId],
-            isGroup: false
+        // Check if receiverId is a group ID or user ID
+        conversation = await Conversation.findById(receiverId)
+        if (conversation && conversation.isGroup) {
+          isGroup = true
+          chatId = conversation._id.toString()
+        } else {
+          // Standard 1-to-1 conversation lookup
+          conversation = await Conversation.findOne({
+            isGroup: false,
+            'members.userId': { $all: [userId, receiverId] },
+            members: { $size: 2 }
           })
-        }
 
-        const chatId = conversation._id.toString()
-        const isReceiverOnline = isUserOnline(receiverId)
+          if (!conversation) {
+            conversation = await Conversation.create({
+              isGroup: false,
+              members: [
+                { userId, role: 'member' },
+                { userId: receiverId, role: 'member' }
+              ]
+            })
+          }
+          chatId = conversation._id.toString()
+        }
 
         const message = await Message.create({
           chatId,
           senderId: userId,
-          receiverId,
+          receiverId: isGroup ? null : receiverId,
           text,
-          status: isReceiverOnline ? 'delivered' : 'sent',
+          status: isGroup ? 'sent' : (isUserOnline(receiverId) ? 'delivered' : 'sent'),
         })
 
         // Update lastMessage on conversation
         conversation.lastMessage = message._id
         await conversation.save()
 
-        // Broadcast new message to both participants (handles synchronization across multiple open tabs)
-        io.to(userId).to(receiverId).emit('new_message', message)
+        if (isGroup) {
+          // Broadcast message to group room, including the senderName
+          io.to(chatId).emit('new_message', {
+            ...message.toObject(),
+            senderName: socket.username
+          })
+        } else {
+          // Broadcast new message to both participants
+          io.to(userId).to(receiverId).emit('new_message', message)
+        }
 
         if (callback) callback({ success: true, message })
       } catch (error) {
@@ -118,12 +158,22 @@ export function init(server) {
     })
 
     // Handle user typing indicators
-    socket.on('typing', ({ receiverId }) => {
-      io.to(receiverId).emit('typing', { senderId: userId })
+    socket.on('typing', async ({ receiverId }) => {
+      const isGroup = await Conversation.exists({ _id: receiverId, isGroup: true })
+      if (isGroup) {
+        socket.to(receiverId).emit('typing', { senderId: userId, chatId: receiverId })
+      } else {
+        io.to(receiverId).emit('typing', { senderId: userId })
+      }
     })
 
-    socket.on('stop_typing', ({ receiverId }) => {
-      io.to(receiverId).emit('stop_typing', { senderId: userId })
+    socket.on('stop_typing', async ({ receiverId }) => {
+      const isGroup = await Conversation.exists({ _id: receiverId, isGroup: true })
+      if (isGroup) {
+        socket.to(receiverId).emit('stop_typing', { senderId: userId, chatId: receiverId })
+      } else {
+        io.to(receiverId).emit('stop_typing', { senderId: userId })
+      }
     })
 
     // Handle marking messages as read
@@ -133,6 +183,7 @@ export function init(server) {
 
         // Fetch the conversation to verify participation and find other participant
         let otherUserId = null
+        let isGroup = false
         if (chatId.includes('_')) {
           // Fallback compatibility for old dynamic ID format
           const participants = chatId.split('_')
@@ -144,20 +195,31 @@ export function init(server) {
         } else {
           // Standard mongoose conversationId
           const conversation = await Conversation.findById(chatId)
-          if (!conversation || !conversation.participants.some(p => p.toString() === userId)) {
+          if (!conversation || !conversation.members.some(m => m.userId.toString() === userId)) {
             if (callback) callback({ error: 'Unauthorized' })
             return
           }
-          otherUserId = conversation.participants.find(p => p.toString() !== userId).toString()
+          isGroup = conversation.isGroup
+          if (!isGroup) {
+            const otherMember = conversation.members.find(m => m.userId.toString() !== userId)
+            if (otherMember) otherUserId = otherMember.userId.toString()
+          }
         }
 
-        await Message.updateMany(
-          { chatId, receiverId: userId, status: { $ne: 'read' } },
-          { $set: { status: 'read' } }
-        )
-
-        if (otherUserId) {
-          io.to(otherUserId).emit('messages_read', { chatId, readerId: userId })
+        if (isGroup) {
+          await Message.updateMany(
+            { chatId, senderId: { $ne: userId }, 'readBy.userId': { $ne: userId } },
+            { $addToSet: { readBy: { userId, readAt: new Date() } } }
+          )
+          io.to(chatId).emit('messages_read', { chatId, readerId: userId })
+        } else {
+          await Message.updateMany(
+            { chatId, receiverId: userId, status: { $ne: 'read' } },
+            { $set: { status: 'read' } }
+          )
+          if (otherUserId) {
+            io.to(otherUserId).emit('messages_read', { chatId, readerId: userId })
+          }
         }
 
         if (callback) callback({ success: true })

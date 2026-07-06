@@ -54,12 +54,14 @@ export function SocketProvider({ children }) {
       })
     })
 
-    newSocket.on('typing', ({ senderId }) => {
-      setTypingStatus((prev) => ({ ...prev, [senderId]: true }))
+    newSocket.on('typing', ({ senderId, chatId }) => {
+      const key = chatId || senderId
+      setTypingStatus((prev) => ({ ...prev, [key]: true }))
     })
 
-    newSocket.on('stop_typing', ({ senderId }) => {
-      setTypingStatus((prev) => ({ ...prev, [senderId]: false }))
+    newSocket.on('stop_typing', ({ senderId, chatId }) => {
+      const key = chatId || senderId
+      setTypingStatus((prev) => ({ ...prev, [key]: false }))
     })
 
     newSocket.on('disconnect', () => {

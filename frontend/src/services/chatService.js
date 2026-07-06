@@ -46,3 +46,92 @@ export async function sendMessage(receiverId, text) {
   }
   return res.json()
 }
+
+export async function createGroup(name, memberIds, avatar) {
+  const res = await fetch(`${BASE_URL}/groups`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name, memberIds, avatar }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to create group')
+  }
+  return res.json()
+}
+
+export async function addMembers(chatId, memberIds) {
+  const res = await fetch(`${BASE_URL}/groups/${chatId}/members`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ memberIds }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to add members')
+  }
+  return res.json()
+}
+
+export async function removeMember(chatId, memberId) {
+  const res = await fetch(`${BASE_URL}/groups/${chatId}/members/${memberId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to remove member')
+  }
+  return res.json()
+}
+
+export async function updateGroupRole(chatId, memberId, role) {
+  const res = await fetch(`${BASE_URL}/groups/${chatId}/role`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ memberId, role }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to update group role')
+  }
+  return res.json()
+}
+
+export async function updateGroupDetails(chatId, name, avatar) {
+  const res = await fetch(`${BASE_URL}/groups/${chatId}/details`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name, avatar }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to update group details')
+  }
+  return res.json()
+}
+
+export async function leaveGroup(chatId) {
+  const res = await fetch(`${BASE_URL}/groups/${chatId}/leave`, {
+    method: 'POST',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to leave group')
+  }
+  return res.json()
+}
+

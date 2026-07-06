@@ -49,7 +49,7 @@ This document tracks both the concepts to learn and the implementation progress 
 ## Build
 
 - [x] Connect Better Auth session to React
-- [ ] Profile picture upload ( using Cloudinary )
+- [x] Profile picture upload ( using Cloudinary )
 - [x] Connect Socket.IO after login
 - [x] Store active socket connections
 - [x] Show online users
@@ -93,21 +93,21 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] Group permissions
-- [ ] Socket.IO rooms
-- [ ] Role-based authorization
-- [ ] Group data modelling
+- [x] Group permissions
+- [x] Socket.IO rooms
+- [x] Role-based authorization
+- [x] Group data modelling
 
 ## Build
 
-- [ ] Group conversations
-- [ ] Create groups
-- [ ] Add members
-- [ ] Remove members
-- [ ] Promote admins
-- [ ] Rename groups
-- [ ] Group avatar
-- [ ] Group settings page
+- [x] Group conversations
+- [x] Create groups
+- [x] Add members
+- [x] Remove members
+- [x] Promote admins
+- [x] Rename groups
+- [x] Group avatar
+- [x] Group settings page
 
 ---
 
