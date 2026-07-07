@@ -140,6 +140,7 @@ function AppLayout() {
 
   // Dynamic Page Header Info
   const renderHeaderTitle = () => {
+    const queryParams = new URLSearchParams(location.search)
     if (location.pathname === "/") {
       return (
         <div className="flex items-center gap-3 text-left">
@@ -152,20 +153,26 @@ function AppLayout() {
     }
     
     // Settings title
-    const settingsSubTab = location.state?.activeTab || "general"
+    const settingsSubTab = queryParams.get("tab")
     return (
       <div className="flex items-center gap-2">
         <button 
-          onClick={() => navigate("/")}
+          onClick={() => {
+            if (settingsSubTab && window.innerWidth < 768) {
+              navigate("/settings")
+            } else {
+              navigate("/")
+            }
+          }}
           className="p-1 rounded-lg text-gray-400 hover:text-gray-850 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mr-1 cursor-pointer"
-          title="Back to Chats"
+          title={settingsSubTab && window.innerWidth < 768 ? "Back to Settings Menu" : "Back to Chats"}
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
         <h1 className="text-lg font-extrabold capitalize text-gray-900 dark:text-white select-none">
-          {settingsSubTab}
+          {settingsSubTab || "Settings"}
         </h1>
       </div>
     )
@@ -188,6 +195,10 @@ function AppLayout() {
     )
   }
 
+  const queryParams = new URLSearchParams(location.search)
+  const isChatPage = location.pathname === "/"
+  const hasActiveChat = isChatPage && queryParams.has('chat') && !!queryParams.get('chat')
+
   return (
     <div className="h-screen w-screen flex bg-bg-app text-text-body overflow-hidden select-none">
       
@@ -195,7 +206,9 @@ function AppLayout() {
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
         
         {/* Global Dynamic Top Header */}
-        <header className="h-[72px] bg-bg-card/90 border-b border-border-app flex-shrink-0 flex items-center justify-between px-6 z-30 select-none backdrop-blur-sm">
+        <header className={`h-[72px] bg-bg-card/90 border-b border-border-app flex-shrink-0 flex items-center justify-between px-6 z-30 select-none backdrop-blur-sm ${
+          hasActiveChat ? 'hidden md:flex' : 'flex'
+        }`}>
           
           {/* Left: Dynamic section title */}
           <div className="flex items-center gap-3">
@@ -211,7 +224,7 @@ function AppLayout() {
 
             {/* Quick Settings */}
             <button
-              onClick={() => navigate("/settings", { state: { activeTab: "account" } })}
+              onClick={() => navigate("/settings?tab=account")}
               className="p-2 text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 rounded-xl transition-all cursor-pointer"
               title="Settings"
             >
@@ -252,7 +265,7 @@ function AppLayout() {
                   </div>
                   <div className="py-1">
                     <button
-                      onClick={() => { setShowUserMenu(false); navigate("/settings", { state: { activeTab: "account" } }) }}
+                      onClick={() => { setShowUserMenu(false); navigate("/settings?tab=account") }}
                       className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-text-body hover:bg-bg-app hover:text-text-title cursor-pointer transition-colors"
                     >
                       <SettingsIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />

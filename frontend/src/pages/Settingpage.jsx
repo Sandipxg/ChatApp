@@ -116,7 +116,15 @@ function SettingsPage() {
   const navigate = useNavigate()
   const location = useLocation()
   
-  const [activeTab, setActiveTab] = useState("account")
+  const [activeTab, setActiveTab] = useState(() => {
+    const initialParams = new URLSearchParams(window.location.search)
+    const initialTab = initialParams.get("tab")
+    if (initialTab) return initialTab
+    if (typeof window !== "undefined" && window.innerWidth >= 768) {
+      return "account"
+    }
+    return null
+  })
   
   // Forms & account action states
   const [password, setPassword] = useState("")
@@ -150,12 +158,21 @@ function SettingsPage() {
     }
   }, [currentUser?.image])
 
-  // Synchronize internal activeTab with parent layout router state clicks
+  // Synchronize activeTab with URL search params
   useEffect(() => {
-    if (location.state?.activeTab) {
-      setActiveTab(location.state.activeTab)
+    const queryParams = new URLSearchParams(location.search)
+    const tabParam = queryParams.get("tab")
+    
+    if (tabParam) {
+      setActiveTab(tabParam)
+    } else {
+      if (window.innerWidth >= 768) {
+        setActiveTab("account")
+      } else {
+        setActiveTab(null)
+      }
     }
-  }, [location.state?.activeTab])
+  }, [location.search])
 
   // Fetch Push subscription state on mount
   useEffect(() => {
@@ -328,15 +345,25 @@ function SettingsPage() {
   // Font size display label
   const fontSizeLabel = fontSize === "small" ? "Small" : fontSize === "large" ? "Large" : "Medium"
 
+  const handleTabClick = (tabName) => {
+    navigate(`/settings?tab=${tabName}`)
+  }
+
+  const handleBackToMenu = () => {
+    navigate("/settings")
+  }
+
   return (
-    <div className="h-full w-full bg-bg-app overflow-hidden font-sans select-none flex">
+    <div className="h-full w-full bg-bg-app overflow-hidden font-sans select-none flex flex-col md:flex-row">
       
       {/* ── 1. SETTINGS CATEGORIES SIDEBAR ── */}
-      <aside className="w-full md:w-[220px] flex-shrink-0 border-r border-border-app flex flex-col justify-between py-5 bg-bg-sidebar select-none">
+      <aside className={`w-full md:w-[220px] flex-shrink-0 border-r border-border-app flex flex-col justify-between py-5 bg-bg-sidebar select-none ${
+        activeTab ? 'hidden md:flex' : 'flex'
+      }`}>
         <div className="flex flex-col gap-0.5 px-3">
 
           <button
-            onClick={() => setActiveTab("account")}
+            onClick={() => handleTabClick("account")}
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "account"
                 ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
@@ -348,7 +375,7 @@ function SettingsPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab("notifications")}
+            onClick={() => handleTabClick("notifications")}
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "notifications"
                 ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
@@ -360,7 +387,7 @@ function SettingsPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab("appearance")}
+            onClick={() => handleTabClick("appearance")}
             className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${
               activeTab === "appearance"
                 ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
@@ -384,8 +411,21 @@ function SettingsPage() {
       </aside>
 
       {/* ── 2. SETTINGS CONTENT PANEL ── */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-8 bg-bg-app select-text">
-        <div className="max-w-xl mx-auto space-y-8">
+      <main className={`flex-1 overflow-y-auto p-6 md:p-8 bg-bg-app select-text ${
+        activeTab ? 'flex flex-col' : 'hidden md:flex'
+      }`}>
+        <div className="max-w-xl mx-auto w-full space-y-8">
+          {activeTab && (
+            <button
+              onClick={handleBackToMenu}
+              className="md:hidden flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-text-title cursor-pointer mb-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+              </svg>
+              <span>Back to Settings</span>
+            </button>
+          )}
 
 
 

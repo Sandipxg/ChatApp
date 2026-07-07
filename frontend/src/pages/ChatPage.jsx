@@ -112,6 +112,7 @@ export default function ChatPage() {
   const { chatWallpaper, enterToSend, playSounds } = useContext(ThemeContext)
   const { socket, onlineUsers, typingStatus, sendMessageViaSocket, sendTypingStatus, markChatAsRead } = useSocket()
   const location = useLocation()
+  const navigate = useNavigate()
   
   const [activeTab, setActiveTab] = useState('chats') // 'chats' or 'contacts'
   const [filterTab, setFilterTab] = useState('all') // 'all', 'unread', 'groups'
@@ -182,7 +183,7 @@ export default function ChatPage() {
 
       const newGroupPartner = updatedPartners.find((p) => p.id === newGroup._id)
       if (newGroupPartner) {
-        handleSelectPartner(newGroupPartner)
+        navigate(`/?chat=${newGroupPartner.id}`)
       }
 
       setIsCreateModalOpen(false)
@@ -354,8 +355,8 @@ export default function ChatPage() {
         try {
           await leaveGroup(selectedPartner.id)
           
-          setSelectedPartner(null)
           setIsDetailsDrawerOpen(false)
+          navigate('/')
           const updatedPartners = await fetchPartners()
           setPartners(updatedPartners)
         } catch (err) {
@@ -392,6 +393,25 @@ export default function ChatPage() {
       }
     }
   }, [location.state?.activeTab])
+
+  // Synchronize URL search params with active chat
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search)
+    const chatParam = queryParams.get('chat')
+
+    if (chatParam) {
+      const foundPartner = partners.find((p) => p.id === chatParam) || contacts.find((c) => c.id === chatParam)
+      if (foundPartner) {
+        if (selectedPartner?.id !== foundPartner.id) {
+          handleSelectPartner(foundPartner)
+        }
+      }
+    } else {
+      if (selectedPartner) {
+        setSelectedPartner(null)
+      }
+    }
+  }, [location.search, partners, contacts, selectedPartner?.id])
 
   // Load initial data
   useEffect(() => {
@@ -559,6 +579,7 @@ export default function ChatPage() {
         setPartners(partnersList)
         setSelectedPartner((prev) => {
           if (prev && prev.id === chatId) {
+            navigate('/')
             return null
           }
           return prev
@@ -1009,7 +1030,7 @@ export default function ChatPage() {
                 return (
                   <div
                     key={partner.id}
-                    onClick={() => handleSelectPartner(partner)}
+                    onClick={() => navigate(`/?chat=${partner.id}`)}
                     className={`flex items-center gap-3.5 p-3.5 rounded-3xl cursor-pointer transition-all duration-150 relative overflow-hidden ${
                       isSelected
                         ? 'bg-accent/8 dark:bg-accent/10 sidebar-item-active'
@@ -1072,7 +1093,7 @@ export default function ChatPage() {
                 return (
                   <div
                     key={contact.id}
-                    onClick={() => handleSelectPartner(contact)}
+                    onClick={() => navigate(`/?chat=${contact.id}`)}
                     className={`flex items-center gap-3.5 p-3.5 rounded-3xl cursor-pointer transition-all duration-150 relative ${
                       isSelected
                         ? 'bg-accent/8 dark:bg-accent/10 sidebar-item-active'
@@ -1116,7 +1137,7 @@ export default function ChatPage() {
               <div className="flex items-center gap-4 w-full">
                 {/* Back link on Mobile */}
                 <button
-                  onClick={() => setSelectedPartner(null)}
+                  onClick={() => navigate('/')}
                   className="md:hidden mr-1 p-2 rounded-2xl text-gray-400 hover:text-text-title hover:bg-bg-sidebar transition-colors cursor-pointer"
                   title="Back to Conversations"
                 >
