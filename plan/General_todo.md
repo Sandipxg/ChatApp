@@ -115,23 +115,26 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] Multipart Form Data
-- [ ] Upload streaming
-- [ ] Cloudinary
-- [ ] AWS S3
-- [ ] Upload progress
+- [x] Multipart Form Data
+- [x] Upload streaming
+- [x] Cloudinary
+- [x] AWS S3 
+- [x] cloudflare R2
+- [x] Upload progress
 
-## Build
+## Build ( using cloudinary because others are paid )
+(only support images videos because for zip , pdf u will need aws s3 or other services which are paid )
 
-- [ ] Attachment schema
-- [ ] Upload API
-- [ ] Drag & Drop
-- [ ] Preview uploads
-- [ ] Upload progress
-- [ ] Image viewer
-- [ ] PDF preview
-- [ ] Audio player
-- [ ] Video player
+- [x] Attachment schema
+- [x] Upload API
+- [x] Drag & Drop
+- [x] Preview uploads
+- [x] Upload progress
+- [x] Image viewer
+- [x] PDF preview (Excluded per user request)
+- [x] Audio player (Excluded per user request)
+- [x] Video player
+
 
 ---
 

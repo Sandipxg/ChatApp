@@ -3,7 +3,8 @@ import { User } from '../models/userModel.js'
 import { Message } from '../models/messageModel.js'
 import { Conversation } from '../models/conversationModel.js'
 import AppError from '../utils/AppError.js'
-import { isUserOnline } from '../services/socketService.js'
+import { isUserOnline, getIo } from '../services/socketService.js'
+import { v2 as cloudinary } from 'cloudinary'
 
 /**
  * Fetches all registered users in the database (excluding the logged-in user).
@@ -322,3 +323,131 @@ export async function getOrCreateConversation(req, res, next) {
     next(error)
   }
 }
+
+/**
+ * Generates a cryptographic signature for direct frontend-to-Cloudinary uploads.
+ * If Cloudinary keys are missing, returns { mock: true }.
+ */
+export async function getUploadSignature(req, res, next) {
+  try {
+    const isConfigured = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET
+    
+    if (!isConfigured) {
+      return res.json({ mock: true })
+    }
+
+    const timestamp = Math.round(new Date().getTime() / 1000)
+    const folder = 'chatapp-media'
+    
+    // Generate api signature
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder
+      },
+      process.env.CLOUDINARY_API_SECRET
+    )
+
+    res.json({
+      signature,
+      timestamp,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      folder
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Saves a message referencing a directly-uploaded media file on Cloudinary.
+ * Request format: JSON body: { receiverId, text, messageType, fileAttachment }
+ */
+export async function createMediaMessage(req, res, next) {
+  try {
+    const senderId = req.userId
+    const { receiverId, text, messageType, fileAttachment } = req.body
+
+    if (!receiverId) {
+      throw new AppError('Receiver ID is required', 400)
+    }
+
+    if (!messageType || !['image', 'video'].includes(messageType)) {
+      throw new AppError('Invalid or missing messageType', 400)
+    }
+
+    if (!fileAttachment || !fileAttachment.url || !fileAttachment.name || !fileAttachment.size || !fileAttachment.mimeType) {
+      throw new AppError('Complete fileAttachment metadata is required', 400)
+    }
+
+    // 1. Find or create conversation
+    let conversation = await Conversation.findById(receiverId)
+    let isGroup = false
+    let chatId = null
+
+    if (conversation && conversation.isGroup) {
+      isGroup = true
+      chatId = conversation._id.toString()
+    } else {
+      // 1-to-1 conversation setup
+      const receiverExists = await User.exists({ _id: receiverId })
+      if (!receiverExists) {
+        throw new AppError('Recipient user not found', 404)
+      }
+
+      conversation = await Conversation.findOne({
+        isGroup: false,
+        'members.userId': { $all: [senderId, receiverId] },
+        members: { $size: 2 }
+      })
+
+      if (!conversation) {
+        conversation = await Conversation.create({
+          isGroup: false,
+          members: [
+            { userId: senderId, role: 'member' },
+            { userId: receiverId, role: 'member' }
+          ]
+        })
+      }
+      chatId = conversation._id.toString()
+    }
+
+    // 2. Create message in database
+    const message = await Message.create({
+      chatId,
+      senderId,
+      receiverId: isGroup ? null : receiverId,
+      text: text || '',
+      messageType,
+      fileAttachment,
+      status: isGroup ? 'sent' : (isUserOnline(receiverId) ? 'delivered' : 'sent'),
+    })
+
+    // 3. Update lastMessage on conversation
+    conversation.lastMessage = message._id
+    await conversation.save()
+
+    // 4. Broadcast in real time via Socket.IO
+    const io = getIo()
+    if (io) {
+      if (isGroup) {
+        // Find sender's name to match standard group socket payload
+        const sender = await User.findById(senderId).select('name')
+        io.to(chatId).emit('new_message', {
+          ...message.toObject(),
+          senderName: sender ? sender.name : 'User'
+        })
+      } else {
+        io.to(senderId).to(receiverId).emit('new_message', message)
+      }
+    }
+
+    res.status(201).json(message)
+  } catch (error) {
+    next(error)
+  }
+}
+
+

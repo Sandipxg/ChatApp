@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useContext } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeContext from '../context/ThemeContext'
-import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup } from '../services/chatService'
+import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage } from '../services/chatService'
 import { useSocket } from '../context/SocketContext'
 
 // Play popup message dispatch sound using Web Audio API synthesis (pure offline solution)
@@ -125,6 +125,15 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState(null)
+
+  // File Sharing state variables & refs
+  const [activeUploads, setActiveUploads] = useState({})
+  const [mediaPreview, setMediaPreview] = useState(null)
+  const [captionText, setCaptionText] = useState('')
+  const [lightboxImage, setLightboxImage] = useState(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const fileInputRef = useRef(null)
+
 
   // Group creation states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -438,6 +447,24 @@ export default function ChatPage() {
         if (msg.chatId === currentChatId) {
           setMessages((prev) => {
             if (prev.some((m) => (m._id || m.id) === (msg._id || msg.id))) return prev
+
+            // Deduplicate local uploads: if this is a media message sent by us,
+            // check if there is an optimistic temporary message in the feed with the same file criteria.
+            if (msg.senderId === currentUser.id && msg.fileAttachment) {
+              const tempIndex = prev.findIndex(
+                (m) =>
+                  m.status === 'uploading' &&
+                  m.fileAttachment &&
+                  m.fileAttachment.name === msg.fileAttachment.name &&
+                  m.fileAttachment.size === msg.fileAttachment.size
+              )
+              if (tempIndex !== -1) {
+                const next = [...prev]
+                next[tempIndex] = msg
+                return next
+              }
+            }
+
             return [...prev, msg]
           })
           if (msg.senderId !== currentUser.id && playSounds) {
@@ -654,6 +681,201 @@ export default function ChatPage() {
       setError('Failed to send message.')
     }
   }
+
+  // Handle file selection from explorer
+  const handleFileSelect = (file) => {
+    if (!file) return
+    if (file.size > 15 * 1024 * 1024) {
+      alert('File size exceeds 15MB limit.')
+      return
+    }
+    const isImage = file.type.startsWith('image/')
+    const isVideo = file.type.startsWith('video/')
+    if (!isImage && !isVideo) {
+      alert('Only images and videos are supported.')
+      return
+    }
+    const url = URL.createObjectURL(file)
+    setMediaPreview({
+      file,
+      url,
+      type: isVideo ? 'video' : 'image'
+    })
+    setCaptionText('')
+  }
+
+  // Triggered when clicking Send in Media Preview dialog
+  const handleSendMedia = () => {
+    if (!mediaPreview || !selectedPartner) return
+    const { file, url, type } = mediaPreview
+    const text = captionText.trim()
+    setMediaPreview(null)
+    startMediaUpload(file, url, type, text)
+  }
+
+  // Abort ongoing upload
+  const handleCancelUpload = (tempId, localUrl) => {
+    const controller = activeUploads[tempId]
+    if (controller) {
+      controller.abort()
+    }
+    setMessages((prev) => prev.filter((m) => m._id !== tempId))
+    if (localUrl) {
+      URL.revokeObjectURL(localUrl)
+    }
+  }
+
+  // Upload runner
+  const startMediaUpload = async (file, localUrl, type, text) => {
+    const tempId = `temp-${Date.now()}`
+    const abortController = new AbortController()
+
+    setActiveUploads((prev) => ({
+      ...prev,
+      [tempId]: abortController
+    }))
+
+    const optimisticMsg = {
+      _id: tempId,
+      chatId: selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_'),
+      senderId: currentUser.id,
+      receiverId: selectedPartner.isGroup ? null : selectedPartner.id,
+      text: text,
+      messageType: type,
+      status: 'uploading',
+      progress: 0,
+      fileAttachment: {
+        url: localUrl,
+        name: file.name,
+        size: file.size,
+        mimeType: file.type
+      },
+      createdAt: new Date().toISOString()
+    }
+
+    setMessages((prev) => [...prev, optimisticMsg])
+    setTimeout(scrollToBottom, 50)
+
+    try {
+      // 1. Fetch Cloudinary upload signature parameters from backend
+      const signatureData = await fetchUploadSignature()
+
+      let finalFileAttachment = null
+
+      // 2. Check if backend returned mock indicator
+      if (signatureData.mock) {
+        console.warn('Backend returned mock storage settings. Simulating upload progress...')
+        
+        for (let pct = 0; pct <= 100; pct += 10) {
+          if (abortController.signal.aborted) {
+            throw new DOMException('Upload aborted by user', 'AbortError')
+          }
+          setMessages((prev) =>
+            prev.map((m) => (m._id === tempId ? { ...m, progress: pct } : m))
+          )
+          await new Promise((r) => setTimeout(r, 120))
+        }
+
+        finalFileAttachment = {
+          url: type === 'video' 
+            ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' 
+            : `https://picsum.photos/seed/${Math.random().toString(36).substring(7)}/800/600`,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type
+        }
+      } else {
+        // 3. Upload directly to Cloudinary
+        const cloudRes = await uploadDirectToCloudinary(
+          file,
+          signatureData,
+          (progressPercent) => {
+            setMessages((prev) =>
+              prev.map((m) => (m._id === tempId ? { ...m, progress: progressPercent } : m))
+            )
+          },
+          abortController.signal
+        )
+
+        finalFileAttachment = {
+          url: cloudRes.secure_url,
+          name: file.name,
+          size: file.size,
+          mimeType: file.type
+        }
+      }
+
+      // 4. Send media metadata payload to our server to register the message
+      const responseMsg = await sendMediaMessage(
+        selectedPartner.id,
+        text,
+        type,
+        finalFileAttachment
+      )
+
+      setActiveUploads((prev) => {
+        const next = { ...prev }
+        delete next[tempId]
+        return next
+      })
+
+      setMessages((prev) => {
+        const alreadyHasResponse = prev.some((m) => (m._id || m.id) === (responseMsg._id || responseMsg.id))
+        if (alreadyHasResponse) {
+          return prev.filter((m) => m._id !== tempId)
+        }
+        return prev.map((m) => (m._id === tempId ? responseMsg : m))
+      })
+      
+      URL.revokeObjectURL(localUrl)
+      setTimeout(scrollToBottom, 50)
+    } catch (err) {
+      if (err.name === 'AbortError' || abortController.signal.aborted) {
+        console.log('Upload aborted successfully.')
+      } else {
+        console.error('File upload failed:', err)
+        setMessages((prev) =>
+          prev.map((m) => (m._id === tempId ? { ...m, status: 'failed' } : m))
+        )
+      }
+      setActiveUploads((prev) => {
+        const next = { ...prev }
+        delete next[tempId]
+        return next
+      })
+    }
+  }
+
+  // Handle drag drop events on Feed Pane
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) {
+      if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
+        handleFileSelect(file)
+      } else {
+        alert('Only images and videos are supported for drop-to-send.')
+      }
+    }
+  }
+
+  // Handle clipboard paste inside text input
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile()
+        if (file) {
+          e.preventDefault()
+          handleFileSelect(file)
+          break
+        }
+      }
+    }
+  }
+
 
   // Key press listener to trigger enter to send logic
   const handleKeyDown = (e) => {
@@ -973,7 +1195,27 @@ export default function ChatPage() {
             </div>
 
             {/* MESSAGE FEED PANE (Wallpaper Applied) */}
-            <div className={`flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin wallpaper-${chatWallpaper}`}>
+            <div 
+              onDragOver={(e) => {
+                e.preventDefault()
+                setIsDragging(true)
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={handleDrop}
+              className={`flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin wallpaper-${chatWallpaper} relative`}
+            >
+              {isDragging && (
+                <div className="absolute inset-0 bg-accent/10 border-4 border-dashed border-accent m-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-xs z-30 pointer-events-none animate-pulse">
+                  <div className="bg-bg-card p-6 rounded-2xl shadow-xl border border-border-app flex flex-col items-center gap-3">
+                    <svg className="w-12 h-12 text-accent" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+                    </svg>
+                    <span className="text-sm font-bold text-text-title">Drop your image or video here</span>
+                    <span className="text-xs text-gray-400">Max size 15MB</span>
+                  </div>
+                </div>
+              )}
+
               {loadingMessages ? (
                 <div className="flex flex-col items-center justify-center h-full space-y-2">
                   <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
@@ -1060,10 +1302,99 @@ export default function ChatPage() {
                           </div>
                         )}
 
-                        {/* Message text with reserved padding for time */}
-                        <p className="text-left break-words whitespace-pre-wrap select-text pb-3.5 pr-10">
-                          {msg.text}
-                        </p>
+                        {/* Media Attachment Content */}
+                        {msg.fileAttachment && msg.fileAttachment.url && (
+                          <div className="mb-2 max-w-full overflow-hidden rounded-xl border border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/20">
+                            {msg.messageType === 'image' ? (
+                              <div 
+                                onClick={() => {
+                                  if (msg.status !== 'uploading' && msg.status !== 'failed') {
+                                    setLightboxImage(msg.fileAttachment.url)
+                                  }
+                                }}
+                                className={`relative max-w-full overflow-hidden ${msg.status !== 'uploading' && msg.status !== 'failed' ? 'cursor-zoom-in' : ''}`}
+                              >
+                                <img
+                                  src={msg.fileAttachment.url}
+                                  alt={msg.fileAttachment.name || 'Image'}
+                                  className="max-h-[280px] w-auto max-w-full object-contain mx-auto"
+                                />
+                                {msg.status === 'uploading' && (
+                                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-3 text-white backdrop-blur-xs">
+                                    <div className="w-10 h-10 border-3 border-white border-t-transparent rounded-full animate-spin mb-2"></div>
+                                    <span className="text-[11px] font-bold">Uploading {msg.progress || 0}%</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleCancelUpload(msg._id, msg.fileAttachment.url)
+                                      }}
+                                      className="mt-3 px-3 py-1 bg-white/20 hover:bg-white/30 active:scale-95 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                )}
+                                {msg.status === 'failed' && (
+                                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-3 text-white">
+                                    <svg className="w-8 h-8 text-red-500 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                    <span className="text-[11px] text-red-400 font-bold">Upload Failed</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setMessages((prev) => prev.filter((m) => m._id !== msg._id))
+                                      }}
+                                      className="mt-2 px-2.5 py-1 bg-red-650 hover:bg-red-750 active:scale-95 text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                                    >
+                                      Dismiss
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : msg.messageType === 'video' ? (
+                              <div className="relative max-w-full overflow-hidden">
+                                {msg.status === 'uploading' ? (
+                                  <div className="h-[180px] w-[300px] max-w-full bg-slate-950 flex flex-col items-center justify-center text-white relative">
+                                    <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin mb-2"></div>
+                                    <span className="text-[11px] font-bold">Uploading Video {msg.progress || 0}%</span>
+                                    <button
+                                      onClick={() => handleCancelUpload(msg._id, msg.fileAttachment.url)}
+                                      className="mt-3 px-3 py-1 bg-white/10 hover:bg-white/20 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : msg.status === 'failed' ? (
+                                  <div className="h-[180px] w-[300px] max-w-full bg-slate-950 flex flex-col items-center justify-center text-white">
+                                    <span className="text-[11px] text-red-400 font-bold mb-2">Video Upload Failed</span>
+                                    <button
+                                      onClick={() => setMessages((prev) => prev.filter((m) => m._id !== msg._id))}
+                                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                                    >
+                                      Dismiss
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <video
+                                    src={msg.fileAttachment.url}
+                                    controls
+                                    preload="metadata"
+                                    className="max-h-[280px] w-auto max-w-full mx-auto"
+                                  />
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        )}
+
+                        {/* Message text with padding (only if text exists) */}
+                        {(!msg.fileAttachment || msg.text) && (
+                          <p className="text-left break-words whitespace-pre-wrap select-text pb-3.5 pr-10">
+                            {msg.text}
+                          </p>
+                        )}
+
 
                         {/* Inline Time and status ticks on the bottom-right */}
                         <div className={`absolute bottom-1 right-2.5 flex items-center gap-0.5 text-[9px] select-none ${
@@ -1112,15 +1443,40 @@ export default function ChatPage() {
                 onSubmit={(e) => { e.preventDefault(); handleSend() }}
                 className="flex items-center gap-3"
               >
+                {/* Attachment trigger */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-3.5 rounded-full text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 transition-all cursor-pointer flex-shrink-0 bg-bg-app border border-border-app"
+                  title="Attach Image or Video"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                  </svg>
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleFileSelect(file)
+                    e.target.value = ''
+                  }}
+                  accept="image/*,video/*"
+                  className="hidden"
+                />
+
                 {/* Input block */}
                 <input
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  onPaste={handlePaste}
                   placeholder="Type a message..."
                   className="flex-1 bg-bg-app border border-border-app focus:bg-bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 text-sm text-text-title placeholder-gray-400 dark:placeholder-gray-500 rounded-full px-6 py-3.5 transition-all select-text"
                 />
+
 
                 {/* Send Button — accent glow */}
                 <button
@@ -1667,6 +2023,100 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Media upload caption and confirm dialog */}
+      {mediaPreview && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-bg-card border border-border-app rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="p-4 border-b border-border-app flex items-center justify-between">
+              <h3 className="font-bold text-text-title text-sm">Send Media Attachment</h3>
+              <button
+                onClick={() => {
+                  URL.revokeObjectURL(mediaPreview.url)
+                  setMediaPreview(null)
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-text-title hover:bg-bg-app transition-all cursor-pointer"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-6 flex flex-col items-center justify-center bg-black/5 dark:bg-black/25 max-h-[350px] overflow-hidden">
+              {mediaPreview.type === 'image' ? (
+                <img
+                  src={mediaPreview.url}
+                  alt="Preview"
+                  className="max-h-[300px] max-w-full rounded-xl object-contain shadow-md"
+                />
+              ) : (
+                <video
+                  src={mediaPreview.url}
+                  controls
+                  className="max-h-[300px] max-w-full rounded-xl object-contain shadow-md"
+                />
+              )}
+            </div>
+
+            <div className="p-4 border-t border-border-app bg-bg-card space-y-3">
+              <input
+                type="text"
+                placeholder="Add a caption (optional)..."
+                value={captionText}
+                onChange={(e) => setCaptionText(e.target.value)}
+                className="w-full bg-bg-app border border-border-app rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/20 text-text-title placeholder-gray-400 dark:placeholder-gray-500"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSendMedia()
+                  }
+                }}
+              />
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    URL.revokeObjectURL(mediaPreview.url)
+                    setMediaPreview(null)
+                  }}
+                  className="px-5 py-2.5 rounded-xl border border-border-app text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-bg-app transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendMedia}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-br from-accent to-indigo-600 text-white text-sm font-semibold shadow-md shadow-accent/20 hover:shadow-accent/40 transition-all cursor-pointer"
+                >
+                  Send
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Image Lightbox Overlay */}
+      {lightboxImage && (
+        <div 
+          onClick={() => setLightboxImage(null)}
+          className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
+        >
+          <button 
+            onClick={() => setLightboxImage(null)}
+            className="absolute top-6 right-6 p-2.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={lightboxImage}
+            alt="Lightbox Zoomed"
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-[90vw] rounded-lg shadow-2xl object-contain animate-scale-up"
+          />
+        </div>
+      )}
+
     </div>
   )
 }
+

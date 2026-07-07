@@ -5,6 +5,7 @@ import auth from '../middleware/auth.js'
 
 const router = express.Router()
 
+
 // Ensure all chat routes require authentication
 router.use(auth)
 
@@ -17,8 +18,16 @@ router.get('/partners', chatController.getChatPartners)
 // Get or create conversation with a specific partner
 router.get('/conversations/:partnerId', chatController.getOrCreateConversation)
 
-// Send a message
+// Send a text message
 router.post('/messages', chatController.sendMsg)
+
+// Get Cloudinary upload signature
+router.get('/upload-signature', chatController.getUploadSignature)
+
+// Create media message
+router.post('/messages/media', chatController.createMediaMessage)
+
+
 
 // Get messages by chatId
 router.get('/messages/:chatId', chatController.getMsgByChatid)

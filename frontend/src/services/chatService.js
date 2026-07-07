@@ -135,3 +135,87 @@ export async function leaveGroup(chatId) {
   return res.json()
 }
 
+export async function fetchUploadSignature() {
+  const res = await fetch(`${BASE_URL}/upload-signature`, { credentials: 'include' })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to fetch upload signature')
+  }
+  return res.json()
+}
+
+export function uploadDirectToCloudinary(file, signatureData, onProgress, abortSignal) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    const formData = new FormData()
+
+    const { signature, timestamp, apiKey, cloudName, folder } = signatureData
+    const resourceType = file.type.startsWith('video/') ? 'video' : 'image'
+
+    formData.append('file', file)
+    formData.append('api_key', apiKey)
+    formData.append('timestamp', timestamp)
+    formData.append('signature', signature)
+    formData.append('folder', folder)
+
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`)
+
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = Math.round((event.loaded * 100) / event.total)
+          onProgress(percent)
+        }
+      }
+    }
+
+    if (abortSignal) {
+      abortSignal.addEventListener('abort', () => {
+        xhr.abort()
+        reject(new DOMException('Upload aborted by user', 'AbortError'))
+      })
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText))
+        } catch (e) {
+          reject(new Error('Invalid response from Cloudinary'))
+        }
+      } else {
+        try {
+          const err = JSON.parse(xhr.responseText)
+          reject(new Error(err.error?.message || `Cloudinary upload failed with status ${xhr.status}`))
+        } catch (e) {
+          reject(new Error(`Cloudinary upload failed with status ${xhr.status}`))
+        }
+      }
+    }
+
+    xhr.onerror = () => {
+      reject(new Error('Network error during Cloudinary upload'))
+    }
+
+    xhr.send(formData)
+  })
+}
+
+export async function sendMediaMessage(receiverId, text, type, fileAttachment) {
+  const res = await fetch(`${BASE_URL}/messages/media`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ receiverId, text, messageType: type, fileAttachment }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to send media message')
+  }
+  return res.json()
+}
+
+
+

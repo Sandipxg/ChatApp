@@ -33,3 +33,38 @@ export async function uploadToCloudinary(fileBuffer, folder = 'chatapp-avatars')
     uploadStream.end(fileBuffer)
   })
 }
+
+export async function uploadChatMediaToCloudinary(fileBuffer, mimeType) {
+  const isVideo = mimeType.startsWith('video/')
+
+  if (!isConfigured) {
+    console.warn('Cloudinary not configured. Falling back to mock chat media upload.')
+    if (isVideo) {
+      // A reliable public sample video for local development
+      return 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+    } else {
+      // A random stable image for local development
+      return `https://picsum.photos/seed/${Math.random().toString(36).substring(7)}/800/600`
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      folder: 'chatapp-media',
+      resource_type: isVideo ? 'video' : 'image',
+    }
+
+    // Keep aspect ratio but limit extreme resolutions to save bandwidth
+    if (!isVideo) {
+      options.transformation = [{ width: 1200, height: 1200, crop: 'limit' }]
+    }
+
+    const uploadStream = cloudinary.uploader.upload_stream(options, (error, result) => {
+      if (error) return reject(error)
+      resolve(result.secure_url)
+    })
+    
+    uploadStream.end(fileBuffer)
+  })
+}
+
