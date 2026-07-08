@@ -142,7 +142,7 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] Message editing
+- [x] Message editing
 - [ ] Soft delete
 - [ ] Hard delete
 - [ ] Emoji reaction architecture
@@ -152,7 +152,7 @@ This document tracks both the concepts to learn and the implementation progress 
 ## Build
 
 - [ ] Reply
-- [ ] Edit
+- [x] Edit
 - [ ] Delete
 - [ ] Delete for everyone
 - [ ] Emoji reactions

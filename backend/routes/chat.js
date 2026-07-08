@@ -21,6 +21,9 @@ router.get('/conversations/:partnerId', chatController.getOrCreateConversation)
 // Send a text message
 router.post('/messages', chatController.sendMsg)
 
+// Edit a text message (Topic 1: Message Editing)
+router.patch('/messages/:messageId', chatController.editMsg)
+
 // Get Cloudinary upload signature
 router.get('/upload-signature', chatController.getUploadSignature)
 

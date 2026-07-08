@@ -450,4 +450,83 @@ export async function createMediaMessage(req, res, next) {
   }
 }
 
+/**
+ * Edits an existing text message.
+ * Constraints:
+ * 1. Must be the sender.
+ * 2. Message type must be 'text'.
+ * 3. Within 10 minutes of sending.
+ * 4. Can only be edited once.
+ */
+export async function editMsg(req, res, next) {
+  try {
+    const { messageId } = req.params
+    const { text } = req.body
+    const userId = req.userId
+
+    if (!text || !text.trim()) {
+      throw new AppError('Message text is required', 400)
+    }
+
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+
+    const updatedMessage = await Message.findOneAndUpdate(
+      {
+        _id: messageId,
+        senderId: userId,
+        messageType: 'text',
+        createdAt: { $gte: tenMinutesAgo },
+        isEdited: false
+      },
+      {
+        $set: {
+          text: text.trim(),
+          isEdited: true,
+          editedAt: new Date()
+        }
+      },
+      { new: true }
+    )
+
+    if (!updatedMessage) {
+      const message = await Message.findById(messageId)
+      if (!message) {
+        throw new AppError('Message not found', 404)
+      }
+      if (message.senderId.toString() !== userId) {
+        throw new AppError('Unauthorized: You can only edit your own messages', 403)
+      }
+      if (message.messageType !== 'text') {
+        throw new AppError('Only text messages can be edited', 400)
+      }
+      if (message.isEdited) {
+        throw new AppError('Messages can only be edited once', 400)
+      }
+      if (new Date() - new Date(message.createdAt) > 10 * 60 * 1000) {
+        throw new AppError('Messages can only be edited within 10 minutes of sending', 400)
+      }
+      throw new AppError('Failed to edit message', 400)
+    }
+
+    // Broadcast the message edit in real time
+    const io = getIo()
+    if (io) {
+      if (updatedMessage.receiverId) {
+        // 1-to-1 chat: notify both users
+        io.to(updatedMessage.senderId.toString())
+          .to(updatedMessage.receiverId.toString())
+          .emit('message_edit', updatedMessage)
+      } else {
+        // Group chat: notify the group room
+        io.to(updatedMessage.chatId.toString()).emit('message_edit', updatedMessage)
+      }
+    }
+
+    res.json(updatedMessage)
+  } catch (error) {
+    next(error)
+  }
+}
+
+
 

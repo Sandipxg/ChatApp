@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useContext } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeContext from '../context/ThemeContext'
-import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage } from '../services/chatService'
+import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage } from '../services/chatService'
 import { useSocket } from '../context/SocketContext'
 
 // Play popup message dispatch sound using Web Audio API synthesis (pure offline solution)
@@ -123,6 +123,8 @@ export default function ChatPage() {
   const [selectedPartner, setSelectedPartner] = useState(null)
   const [messages, setMessages] = useState([])
   const [inputText, setInputText] = useState('')
+  const [editingMessage, setEditingMessage] = useState(null)
+  const [activeContextMenu, setActiveContextMenu] = useState(null) // { msg, x, y, isTouch }
   const [loading, setLoading] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState(null)
@@ -163,6 +165,7 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef(null)
   const typingTimeoutRef = useRef(null)
+  const touchTimerRef = useRef(null)
 
   // Group Creation Form submission
   const handleCreateGroupSubmit = async (e) => {
@@ -383,6 +386,70 @@ export default function ChatPage() {
   const handleCancelConfirm = () => {
     setConfirmDialog((prev) => ({ ...prev, isOpen: false, onConfirm: null }))
   }
+
+  // Handle context menu open (long press or right click)
+  const openContextMenu = (e, msg, isTouch = false) => {
+    e.preventDefault()
+    let x = 0
+    let y = 0
+    if (isTouch) {
+      const touch = e.touches[0] || e.changedTouches[0]
+      x = touch.clientX
+      y = touch.clientY
+    } else {
+      x = e.clientX
+      y = e.clientY
+    }
+    setActiveContextMenu({ msg, x, y, isTouch })
+  }
+
+  // Handle touch start (long press timer initiation)
+  const handleTouchStart = (e, msg) => {
+    // Clear any existing timer
+    if (touchTimerRef.current) clearTimeout(touchTimerRef.current)
+    
+    // Capture details of the event
+    const eventDetails = {
+      preventDefault: () => e.preventDefault(),
+      clientX: e.touches[0]?.clientX || 0,
+      clientY: e.touches[0]?.clientY || 0,
+      touches: Array.from(e.touches)
+    }
+
+    touchTimerRef.current = setTimeout(() => {
+      openContextMenu(eventDetails, msg, true)
+    }, 550) // 550ms hold triggers the menu
+  }
+
+  // Handle touch end/move (cancels the timer if scrolling or release early)
+  const handleTouchCancel = () => {
+    if (touchTimerRef.current) {
+      clearTimeout(touchTimerRef.current)
+      touchTimerRef.current = null
+    }
+  }
+
+  // Dismiss context menu on click/touch anywhere outside
+  useEffect(() => {
+    if (!activeContextMenu) return
+
+    const handleOutsideClick = (e) => {
+      const menuEl = document.getElementById('chat-context-menu')
+      if (menuEl && menuEl.contains(e.target)) return
+      setActiveContextMenu(null)
+    }
+
+    const timer = setTimeout(() => {
+      window.addEventListener('click', handleOutsideClick)
+      window.addEventListener('touchstart', handleOutsideClick)
+    }, 10)
+
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('click', handleOutsideClick)
+      window.removeEventListener('touchstart', handleOutsideClick)
+    }
+  }, [activeContextMenu])
 
   // Handle active navigation tab from parent App layout shell
   useEffect(() => {
@@ -630,7 +697,36 @@ export default function ChatPage() {
       })
     }
 
+    const handleMessageEdit = (updatedMsg) => {
+      if (selectedPartner) {
+        const currentChatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+        if (updatedMsg.chatId === currentChatId) {
+          setMessages((prev) =>
+            prev.map((m) => ((m._id || m.id) === (updatedMsg._id || updatedMsg.id) ? updatedMsg : m))
+          )
+        }
+      }
+      setPartners((prev) =>
+        prev.map((p) => {
+          const matchChatId = p.chatId || p.id
+          if (matchChatId === updatedMsg.chatId) {
+            if (p.latestMessage && (p.latestMessage.id === (updatedMsg._id || updatedMsg.id) || p.latestMessage._id === (updatedMsg._id || updatedMsg.id))) {
+              return {
+                ...p,
+                latestMessage: {
+                  ...p.latestMessage,
+                  text: updatedMsg.text
+                }
+              }
+            }
+          }
+          return p
+        })
+      )
+    }
+
     socket.on('new_message', handleNewMessage)
+    socket.on('message_edit', handleMessageEdit)
     socket.on('user_online', handleUserOnline)
     socket.on('user_offline', handleUserOffline)
     socket.on('messages_delivered', handleMessagesDelivered)
@@ -643,6 +739,7 @@ export default function ChatPage() {
 
     return () => {
       socket.off('new_message', handleNewMessage)
+      socket.off('message_edit', handleMessageEdit)
       socket.off('user_online', handleUserOnline)
       socket.off('user_offline', handleUserOffline)
       socket.off('messages_delivered', handleMessagesDelivered)
@@ -660,6 +757,7 @@ export default function ChatPage() {
     setSelectedPartner(partner)
     setLoadingMessages(true)
     setInputText('')
+    setEditingMessage(null)
 
     try {
       const chatId = partner.chatId || [currentUser.id, partner.id].sort().join('_')
@@ -686,6 +784,21 @@ export default function ChatPage() {
 
     const textToSend = inputText.trim()
     setInputText('')
+
+    if (editingMessage) {
+      const msgId = editingMessage._id || editingMessage.id
+      setEditingMessage(null)
+      try {
+        const updatedMsg = await editMessage(msgId, textToSend)
+        setMessages((prev) =>
+          prev.map((m) => ((m._id || m.id) === msgId ? updatedMsg : m))
+        )
+      } catch (err) {
+        console.error('Error editing message:', err)
+        setError(err.message || 'Failed to edit message.')
+      }
+      return
+    }
 
     if (playSounds) playPopSound()
 
@@ -1269,6 +1382,11 @@ export default function ChatPage() {
                     ? contacts.find(c => c.id === msg.senderId || c.id === msg.senderId?.toString())
                     : null
 
+                  const canEdit = isOwnMessage &&
+                    (msg.messageType === 'text' || !msg.messageType) &&
+                    !msg.isEdited &&
+                    ((Date.now() - new Date(msg.createdAt).getTime()) < 10 * 60 * 1000)
+
                   if (msg.messageType === 'system') {
                     return (
                       <div
@@ -1307,7 +1425,16 @@ export default function ChatPage() {
                       )}
 
                       {/* Message Bubble */}
-                      <div className={`rounded-2xl px-4 pt-2.5 pb-2 leading-relaxed text-sm relative max-w-full min-w-[70px] ${
+                      <div 
+                        onContextMenu={(e) => openContextMenu(e, msg, false)}
+                        onTouchStart={(e) => handleTouchStart(e, msg)}
+                        onTouchEnd={handleTouchCancel}
+                        onTouchMove={handleTouchCancel}
+                        className={`rounded-2xl px-4 pt-2.5 pb-2 leading-relaxed text-sm relative max-w-full group ${
+                          isOwnMessage
+                            ? (msg.isEdited ? 'min-w-[130px]' : 'min-w-[90px]')
+                            : (msg.isEdited ? 'min-w-[110px]' : 'min-w-[75px]')
+                        } group ${
                         isOwnMessage
                           ? 'bg-emerald-600 dark:bg-emerald-700 text-white bubble-own'
                           : 'bg-bg-card text-text-body border border-border-app shadow-sm'
@@ -1316,6 +1443,25 @@ export default function ChatPage() {
                           ? (isOwnMessage ? 'rounded-tr-md' : 'rounded-tl-md')
                           : (isOwnMessage ? 'rounded-tr-none' : 'rounded-tl-none')
                       }`}>
+                        {/* Hover Action Menu */}
+                        {canEdit && (
+                          <div className="absolute -top-3.5 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex items-center bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-full shadow-md p-1.5 z-10 hover:scale-105 active:scale-95 cursor-pointer">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setEditingMessage(msg)
+                                setInputText(msg.text)
+                              }}
+                              className="text-gray-500 hover:text-accent dark:text-gray-400 dark:hover:text-accent transition-colors flex items-center justify-center"
+                              title="Edit Message"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+
                         {/* Sender name for group chats */}
                         {!isOwnMessage && selectedPartner.isGroup && !isConsecutivePrev && (
                           <div className={`text-[11px] font-extrabold mb-1 select-none text-left leading-none ${getSenderColor(msg.senderId)}`}>
@@ -1411,16 +1557,23 @@ export default function ChatPage() {
 
                         {/* Message text with padding (only if text exists) */}
                         {(!msg.fileAttachment || msg.text) && (
-                          <p className="text-left break-words whitespace-pre-wrap select-text pb-3.5 pr-10">
+                          <p className={`text-left break-words whitespace-pre-wrap select-text pb-3.5 ${
+                            isOwnMessage
+                              ? (msg.isEdited ? 'pr-[115px]' : 'pr-[75px]')
+                              : (msg.isEdited ? 'pr-[95px]' : 'pr-[58px]')
+                          }`}>
                             {msg.text}
                           </p>
                         )}
 
 
                         {/* Inline Time and status ticks on the bottom-right */}
-                        <div className={`absolute bottom-1 right-2.5 flex items-center gap-0.5 text-[9px] select-none ${
+                        <div className={`absolute bottom-1 right-2.5 flex items-center gap-1 text-[9px] select-none whitespace-nowrap ${
                           isOwnMessage ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'
                         }`}>
+                          {msg.isEdited && (
+                            <span className="opacity-80 italic">(edited)</span>
+                          )}
                           <span>{formatTime(msg.createdAt)}</span>
                           {isOwnMessage && (
                             <span className="flex items-center">
@@ -1460,6 +1613,27 @@ export default function ChatPage() {
 
             {/* MESSAGE INPUT CONTAINER — floating pill */}
             <div className="px-4 py-4 md:px-6 bg-bg-card/90 border-t border-border-app flex-shrink-0 select-none z-10 backdrop-blur-sm">
+              {editingMessage && (
+                <div className="flex items-center justify-between bg-accent/8 dark:bg-accent/12 px-4 py-2 rounded-2xl mb-3 text-xs text-text-title animate-fade-in border border-accent/20">
+                  <div className="flex items-center gap-2 truncate">
+                    <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                    </svg>
+                    <span className="font-bold">Editing message:</span>
+                    <span className="truncate italic opacity-85">"{editingMessage.text}"</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingMessage(null)
+                      setInputText('')
+                    }}
+                    className="text-gray-400 hover:text-red-500 font-bold transition-all px-1.5 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend() }}
                 className="flex items-center gap-3"
@@ -2136,6 +2310,111 @@ export default function ChatPage() {
           />
         </div>
       )}
+
+      {/* ── CUSTOM CONTEXT MENU / BOTTOM SHEET ── */}
+      {activeContextMenu && (() => {
+        const { msg, x, y } = activeContextMenu
+        const isOwn = msg.senderId === currentUser.id || msg.senderId === 'me'
+        const canEditMsg = isOwn && 
+          (msg.messageType === 'text' || !msg.messageType) && 
+          !msg.isEdited && 
+          ((Date.now() - new Date(msg.createdAt).getTime()) < 10 * 60 * 1000)
+
+        const handleCopy = () => {
+          navigator.clipboard.writeText(msg.text)
+          setActiveContextMenu(null)
+        }
+
+        const handleEditClick = () => {
+          setEditingMessage(msg)
+          setInputText(msg.text)
+          setActiveContextMenu(null)
+        }
+
+        return (
+          <div className="fixed inset-0 z-50 select-none pointer-events-none">
+            {/* Desktop Context Menu (hidden on mobile, uses coordinates) */}
+            <div 
+              id="chat-context-menu"
+              style={{ top: `${y}px`, left: `${x}px` }}
+              className="hidden md:block fixed bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200/50 dark:border-slate-800/50 rounded-2xl shadow-xl w-48 p-1.5 pointer-events-auto animate-scale-up"
+            >
+              <ul className="space-y-0.5">
+                {canEditMsg && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={handleEditClick}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-text-title hover:bg-accent/8 dark:hover:bg-accent/12 hover:text-accent rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                      </svg>
+                      <span>Edit Message</span>
+                    </button>
+                  </li>
+                )}
+                <li>
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-text-title hover:bg-accent/8 dark:hover:bg-accent/12 hover:text-accent rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376A8.965 8.965 0 0 0 12 12.75a8.965 8.965 0 0 0-3.758 3.848m8.25-10.5V3.375c0-.621-.504-1.125-1.125-1.125h-9.75a1.125 1.125 0 0 0-1.125 1.125V15.75c0 .621.504 1.125 1.125 1.125h1.5m10.375-12h-9.75c-.621 0-1.125.504-1.125 1.125v9.75c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125Z" />
+                    </svg>
+                    <span>Copy Text</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            {/* Mobile Bottom Sheet Overlay (visible on mobile, ignores coordinates) */}
+            <div className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-xs pointer-events-auto animate-fade-in z-45" onClick={() => setActiveContextMenu(null)}>
+              <div 
+                id="chat-context-menu-mobile"
+                onClick={(e) => e.stopPropagation()}
+                className="absolute bottom-0 inset-x-0 bg-white dark:bg-slate-900 border-t border-gray-250/60 dark:border-slate-800/60 rounded-t-3xl shadow-2xl p-6 pointer-events-auto space-y-4 max-h-[40vh] overflow-y-auto animate-slide-up"
+              >
+                {/* Visual drag handle */}
+                <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-2" onClick={() => setActiveContextMenu(null)}></div>
+                <div className="text-left mb-2">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Message Options</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1 italic">"{msg.text}"</p>
+                </div>
+                <div className="space-y-2">
+                  {canEditMsg && (
+                    <button
+                      onClick={handleEditClick}
+                      className="w-full py-3.5 px-4 bg-accent text-white font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-md shadow-accent/20"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
+                      </svg>
+                      <span className="text-sm">Edit Message</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleCopy}
+                    className="w-full py-3.5 px-4 bg-bg-app border border-border-app text-text-body font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376A8.965 8.965 0 0 0 12 12.75a8.965 8.965 0 0 0-3.758 3.848m8.25-10.5V3.375c0-.621-.504-1.125-1.125-1.125h-9.75a1.125 1.125 0 0 0-1.125 1.125V15.75c0 .621.504 1.125 1.125 1.125h1.5m10.375-12h-9.75c-.621 0-1.125.504-1.125 1.125v9.75c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125Z" />
+                    </svg>
+                    <span className="text-sm">Copy Text</span>
+                  </button>
+                  <button
+                    onClick={() => setActiveContextMenu(null)}
+                    className="w-full py-3.5 px-4 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
     </div>
   )

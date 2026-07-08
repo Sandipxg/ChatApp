@@ -217,5 +217,22 @@ export async function sendMediaMessage(receiverId, text, type, fileAttachment) {
   return res.json()
 }
 
+export async function editMessage(messageId, text) {
+  const res = await fetch(`${BASE_URL}/messages/${messageId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to edit message')
+  }
+  return res.json()
+}
+
+
 
 
