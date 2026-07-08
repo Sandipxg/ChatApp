@@ -70,7 +70,11 @@ export async function getChatPartners(req, res, next) {
             ? {
                 id: convo.lastMessage._id.toString(),
                 chatId: convo.lastMessage.chatId.toString(),
-                text: convo.lastMessage.text,
+                text: convo.lastMessage.isDeleted
+                  ? 'This message was deleted'
+                  : (convo.lastMessage.deletedBy && convo.lastMessage.deletedBy.some(id => id.toString() === currentUserId)
+                    ? 'Message deleted'
+                    : convo.lastMessage.text),
                 senderId: convo.lastMessage.senderId.toString(),
                 receiverId: convo.lastMessage.receiverId ? convo.lastMessage.receiverId.toString() : null,
                 createdAt: convo.lastMessage.createdAt,
@@ -111,7 +115,11 @@ export async function getChatPartners(req, res, next) {
           ? {
               id: convo.lastMessage._id.toString(),
               chatId: convo.lastMessage.chatId.toString(),
-              text: convo.lastMessage.text,
+              text: convo.lastMessage.isDeleted
+                ? 'This message was deleted'
+                : (convo.lastMessage.deletedBy && convo.lastMessage.deletedBy.some(id => id.toString() === currentUserId)
+                  ? 'Message deleted'
+                  : convo.lastMessage.text),
               senderId: convo.lastMessage.senderId.toString(),
               receiverId: convo.lastMessage.receiverId ? convo.lastMessage.receiverId.toString() : null,
               createdAt: convo.lastMessage.createdAt,
@@ -241,7 +249,10 @@ export async function getMsgByChatid(req, res, next) {
     }
 
     // Build keyset pagination query
-    const query = { chatId: targetChatId }
+    const query = {
+      chatId: targetChatId,
+      deletedBy: { $ne: currentUserId } // Exclude messages deleted by current user
+    }
     if (cursor && mongoose.Types.ObjectId.isValid(cursor)) {
       query._id = { $lt: cursor }
     }
@@ -271,7 +282,29 @@ export async function getMsgByChatid(req, res, next) {
       )
     }
 
-    res.json(messages)
+    // Sanitize soft-deleted messages
+    const sanitizedMessages = messages.map(msg => {
+      if (msg.isDeleted) {
+        return {
+          _id: msg._id,
+          chatId: msg.chatId,
+          senderId: msg.senderId,
+          receiverId: msg.receiverId,
+          isDeleted: true,
+          deletedAt: msg.deletedAt,
+          text: 'This message was deleted',
+          messageType: 'text',
+          fileAttachment: { url: null, name: null, size: null, mimeType: null },
+          status: msg.status,
+          readBy: msg.readBy,
+          createdAt: msg.createdAt,
+          updatedAt: msg.updatedAt
+        }
+      }
+      return msg
+    })
+
+    res.json(sanitizedMessages)
   } catch (error) {
     next(error)
   }
@@ -476,7 +509,8 @@ export async function editMsg(req, res, next) {
         senderId: userId,
         messageType: 'text',
         createdAt: { $gte: tenMinutesAgo },
-        isEdited: false
+        isEdited: false,
+        isDeleted: false // Prevent editing deleted messages
       },
       {
         $set: {
@@ -495,6 +529,9 @@ export async function editMsg(req, res, next) {
       }
       if (message.senderId.toString() !== userId) {
         throw new AppError('Unauthorized: You can only edit your own messages', 403)
+      }
+      if (message.isDeleted) {
+        throw new AppError('Deleted messages cannot be edited', 400)
       }
       if (message.messageType !== 'text') {
         throw new AppError('Only text messages can be edited', 400)
@@ -523,6 +560,112 @@ export async function editMsg(req, res, next) {
     }
 
     res.json(updatedMessage)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Deletes a message for everyone (global soft delete).
+ * Constraints:
+ * 1. Must be the sender.
+ * 2. Within 24 hours of sending.
+ * 3. Message is not already deleted.
+ */
+export async function deleteMessageForEveryone(req, res, next) {
+  try {
+    const { messageId } = req.params
+    const userId = req.userId
+
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+    const updatedMessage = await Message.findOneAndUpdate(
+      {
+        _id: messageId,
+        senderId: userId,
+        isDeleted: false,
+        createdAt: { $gte: twentyFourHoursAgo }
+      },
+      {
+        $set: {
+          isDeleted: true,
+          deletedAt: new Date(),
+          text: '', // clear text content
+          fileAttachment: { url: null, name: null, size: null, mimeType: null } // clear attachment references
+        }
+      },
+      { new: true }
+    )
+
+    if (!updatedMessage) {
+      const message = await Message.findById(messageId)
+      if (!message) {
+        throw new AppError('Message not found', 404)
+      }
+      if (message.senderId.toString() !== userId) {
+        throw new AppError('Unauthorized: You can only delete your own messages', 403)
+      }
+      if (message.isDeleted) {
+        throw new AppError('Message is already deleted', 400)
+      }
+      if (new Date() - new Date(message.createdAt) > 24 * 60 * 60 * 1000) {
+        throw new AppError('Messages can only be deleted for everyone within 24 hours of sending', 400)
+      }
+      throw new AppError('Failed to delete message', 400)
+    }
+
+    // Broadcast the message delete in real time
+    const io = getIo()
+    if (io) {
+      if (updatedMessage.receiverId) {
+        // 1-to-1 chat: notify both users
+        io.to(updatedMessage.senderId.toString())
+          .to(updatedMessage.receiverId.toString())
+          .emit('message_deleted_everyone', {
+            messageId: updatedMessage._id,
+            chatId: updatedMessage.chatId,
+            isDeleted: true,
+            deletedAt: updatedMessage.deletedAt
+          })
+      } else {
+        // Group chat: notify the group room
+        io.to(updatedMessage.chatId.toString()).emit('message_deleted_everyone', {
+          messageId: updatedMessage._id,
+          chatId: updatedMessage.chatId,
+          isDeleted: true,
+          deletedAt: updatedMessage.deletedAt
+        })
+      }
+    }
+
+    res.json(updatedMessage)
+  } catch (error) {
+    next(error)
+  }
+}
+
+/**
+ * Deletes a message for the current user (individual soft delete).
+ * The message will be hidden from their view but remains visible to other participants.
+ */
+export async function deleteMessageForMe(req, res, next) {
+  try {
+    const { messageId } = req.params
+    const userId = req.userId
+
+    const updatedMessage = await Message.findByIdAndUpdate(
+      messageId,
+      {
+        $addToSet: { deletedBy: userId }
+      },
+      { new: true }
+    )
+
+    if (!updatedMessage) {
+      throw new AppError('Message not found', 404)
+    }
+
+    res.json({ success: true, messageId: updatedMessage._id })
   } catch (error) {
     next(error)
   }

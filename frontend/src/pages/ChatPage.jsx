@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useContext } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeContext from '../context/ThemeContext'
-import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage } from '../services/chatService'
+import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage, deleteMessageForEveryone, deleteMessageForMe } from '../services/chatService'
 import { useSocket } from '../context/SocketContext'
 
 // Play popup message dispatch sound using Web Audio API synthesis (pure offline solution)
@@ -389,6 +389,7 @@ export default function ChatPage() {
 
   // Handle context menu open (long press or right click)
   const openContextMenu = (e, msg, isTouch = false) => {
+    if (msg.isDeleted) return
     e.preventDefault()
     let x = 0
     let y = 0
@@ -405,6 +406,7 @@ export default function ChatPage() {
 
   // Handle touch start (long press timer initiation)
   const handleTouchStart = (e, msg) => {
+    if (msg.isDeleted) return
     // Clear any existing timer
     if (touchTimerRef.current) clearTimeout(touchTimerRef.current)
     
@@ -725,8 +727,47 @@ export default function ChatPage() {
       )
     }
 
+    const handleMessageDeleteEveryone = (deletedDetails) => {
+      if (selectedPartner) {
+        const currentChatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+        if (deletedDetails.chatId === currentChatId) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              (m._id || m.id) === deletedDetails.messageId
+                ? {
+                    ...m,
+                    isDeleted: true,
+                    deletedAt: deletedDetails.deletedAt,
+                    text: 'This message was deleted',
+                    fileAttachment: null
+                  }
+                : m
+            )
+          )
+        }
+      }
+      setPartners((prev) =>
+        prev.map((p) => {
+          const matchChatId = p.chatId || p.id
+          if (matchChatId === deletedDetails.chatId) {
+            if (p.latestMessage && (p.latestMessage.id === deletedDetails.messageId || p.latestMessage._id === deletedDetails.messageId)) {
+              return {
+                ...p,
+                latestMessage: {
+                  ...p.latestMessage,
+                  text: 'This message was deleted'
+                }
+              }
+            }
+          }
+          return p
+        })
+      )
+    }
+
     socket.on('new_message', handleNewMessage)
     socket.on('message_edit', handleMessageEdit)
+    socket.on('message_deleted_everyone', handleMessageDeleteEveryone)
     socket.on('user_online', handleUserOnline)
     socket.on('user_offline', handleUserOffline)
     socket.on('messages_delivered', handleMessagesDelivered)
@@ -740,6 +781,7 @@ export default function ChatPage() {
     return () => {
       socket.off('new_message', handleNewMessage)
       socket.off('message_edit', handleMessageEdit)
+      socket.off('message_deleted_everyone', handleMessageDeleteEveryone)
       socket.off('user_online', handleUserOnline)
       socket.off('user_offline', handleUserOffline)
       socket.off('messages_delivered', handleMessagesDelivered)
@@ -813,6 +855,69 @@ export default function ChatPage() {
     } catch (err) {
       console.error('Error sending message via socket:', err)
       setError('Failed to send message.')
+    }
+  }
+
+  const handleDeleteEveryone = async (messageId) => {
+    try {
+      const updated = await deleteMessageForEveryone(messageId)
+      setMessages((prev) =>
+        prev.map((m) =>
+          (m._id || m.id) === messageId
+            ? {
+                ...m,
+                isDeleted: true,
+                deletedAt: updated.deletedAt,
+                text: 'This message was deleted',
+                fileAttachment: null
+              }
+            : m
+        )
+      )
+      setPartners((prev) =>
+        prev.map((p) => {
+          const matchChatId = p.chatId || p.id
+          if (matchChatId === updated.chatId) {
+            if (p.latestMessage && (p.latestMessage.id === messageId || p.latestMessage._id === messageId)) {
+              return {
+                ...p,
+                latestMessage: {
+                  ...p.latestMessage,
+                  text: 'This message was deleted'
+                }
+              }
+            }
+          }
+          return p
+        })
+      )
+    } catch (err) {
+      console.error('Failed to delete message for everyone:', err.message)
+      alert(err.message || 'Failed to delete message')
+    }
+  }
+
+  const handleDeleteMe = async (messageId) => {
+    try {
+      await deleteMessageForMe(messageId)
+      setMessages((prev) => prev.filter((m) => (m._id || m.id) !== messageId))
+      setPartners((prev) =>
+        prev.map((p) => {
+          if (p.latestMessage && (p.latestMessage.id === messageId || p.latestMessage._id === messageId)) {
+            return {
+              ...p,
+              latestMessage: {
+                ...p.latestMessage,
+                text: 'Message deleted'
+              }
+            }
+          }
+          return p
+        })
+      )
+    } catch (err) {
+      console.error('Failed to delete message for me:', err.message)
+      alert(err.message || 'Failed to delete message')
     }
   }
 
@@ -1385,6 +1490,7 @@ export default function ChatPage() {
                   const canEdit = isOwnMessage &&
                     (msg.messageType === 'text' || !msg.messageType) &&
                     !msg.isEdited &&
+                    !msg.isDeleted &&
                     ((Date.now() - new Date(msg.createdAt).getTime()) < 10 * 60 * 1000)
 
                   if (msg.messageType === 'system') {
@@ -1469,101 +1575,116 @@ export default function ChatPage() {
                           </div>
                         )}
 
-                        {/* Media Attachment Content */}
-                        {msg.fileAttachment && msg.fileAttachment.url && (
-                          <div className="mb-2 max-w-full overflow-hidden rounded-xl border border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/20">
-                            {msg.messageType === 'image' ? (
-                              <div 
-                                onClick={() => {
-                                  if (msg.status !== 'uploading' && msg.status !== 'failed') {
-                                    setLightboxImage(msg.fileAttachment.url)
-                                  }
-                                }}
-                                className={`relative max-w-full overflow-hidden ${msg.status !== 'uploading' && msg.status !== 'failed' ? 'cursor-zoom-in' : ''}`}
-                              >
-                                <img
-                                  src={msg.fileAttachment.url}
-                                  alt={msg.fileAttachment.name || 'Image'}
-                                  className="max-h-[280px] w-auto max-w-full object-contain mx-auto"
-                                />
-                                {msg.status === 'uploading' && (
-                                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-3 text-white backdrop-blur-xs">
-                                    <div className="w-10 h-10 border-3 border-white border-t-transparent rounded-full animate-spin mb-2"></div>
-                                    <span className="text-[11px] font-bold">Uploading {msg.progress || 0}%</span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleCancelUpload(msg._id, msg.fileAttachment.url)
-                                      }}
-                                      className="mt-3 px-3 py-1 bg-white/20 hover:bg-white/30 active:scale-95 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                )}
-                                {msg.status === 'failed' && (
-                                  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-3 text-white">
-                                    <svg className="w-8 h-8 text-red-500 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                    <span className="text-[11px] text-red-400 font-bold">Upload Failed</span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setMessages((prev) => prev.filter((m) => m._id !== msg._id))
-                                      }}
-                                      className="mt-2 px-2.5 py-1 bg-red-650 hover:bg-red-750 active:scale-95 text-[10px] font-bold rounded-md transition-all cursor-pointer"
-                                    >
-                                      Dismiss
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            ) : msg.messageType === 'video' ? (
-                              <div className="relative max-w-full overflow-hidden">
-                                {msg.status === 'uploading' ? (
-                                  <div className="h-[180px] w-[300px] max-w-full bg-slate-950 flex flex-col items-center justify-center text-white relative">
-                                    <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin mb-2"></div>
-                                    <span className="text-[11px] font-bold">Uploading Video {msg.progress || 0}%</span>
-                                    <button
-                                      onClick={() => handleCancelUpload(msg._id, msg.fileAttachment.url)}
-                                      className="mt-3 px-3 py-1 bg-white/10 hover:bg-white/20 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                ) : msg.status === 'failed' ? (
-                                  <div className="h-[180px] w-[300px] max-w-full bg-slate-950 flex flex-col items-center justify-center text-white">
-                                    <span className="text-[11px] text-red-400 font-bold mb-2">Video Upload Failed</span>
-                                    <button
-                                      onClick={() => setMessages((prev) => prev.filter((m) => m._id !== msg._id))}
-                                      className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-[10px] font-bold rounded-md transition-all cursor-pointer"
-                                    >
-                                      Dismiss
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <video
-                                    src={msg.fileAttachment.url}
-                                    controls
-                                    preload="metadata"
-                                    className="max-h-[280px] w-auto max-w-full mx-auto"
-                                  />
-                                )}
-                              </div>
-                            ) : null}
-                          </div>
-                        )}
-
-                        {/* Message text with padding (only if text exists) */}
-                        {(!msg.fileAttachment || msg.text) && (
-                          <p className={`text-left break-words whitespace-pre-wrap select-text pb-3.5 ${
-                            isOwnMessage
-                              ? (msg.isEdited ? 'pr-[115px]' : 'pr-[75px]')
-                              : (msg.isEdited ? 'pr-[95px]' : 'pr-[58px]')
+                        {msg.isDeleted ? (
+                          <p className={`text-left break-words select-none pb-3.5 italic flex items-center gap-1.5 ${
+                            isOwnMessage ? 'text-white/60' : 'text-gray-400 dark:text-gray-500'
+                          } ${
+                            isOwnMessage ? 'pr-[75px]' : 'pr-[58px]'
                           }`}>
-                            {msg.text}
+                            <svg className="w-3.5 h-3.5 opacity-80 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                            </svg>
+                            <span>This message was deleted</span>
                           </p>
+                        ) : (
+                          <>
+                            {/* Media Attachment Content */}
+                            {msg.fileAttachment && msg.fileAttachment.url && (
+                              <div className="mb-2 max-w-full overflow-hidden rounded-xl border border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/20">
+                                {msg.messageType === 'image' ? (
+                                  <div 
+                                    onClick={() => {
+                                      if (msg.status !== 'uploading' && msg.status !== 'failed') {
+                                        setLightboxImage(msg.fileAttachment.url)
+                                      }
+                                    }}
+                                    className={`relative max-w-full overflow-hidden ${msg.status !== 'uploading' && msg.status !== 'failed' ? 'cursor-zoom-in' : ''}`}
+                                  >
+                                    <img
+                                      src={msg.fileAttachment.url}
+                                      alt={msg.fileAttachment.name || 'Image'}
+                                      className="max-h-[280px] w-auto max-w-full object-contain mx-auto"
+                                    />
+                                    {msg.status === 'uploading' && (
+                                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center p-3 text-white backdrop-blur-xs">
+                                        <div className="w-10 h-10 border-3 border-white border-t-transparent rounded-full animate-spin mb-2"></div>
+                                        <span className="text-[11px] font-bold">Uploading {msg.progress || 0}%</span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleCancelUpload(msg._id, msg.fileAttachment.url)
+                                          }}
+                                          className="mt-3 px-3 py-1 bg-white/20 hover:bg-white/30 active:scale-95 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    )}
+                                    {msg.status === 'failed' && (
+                                      <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center p-3 text-white">
+                                        <svg className="w-8 h-8 text-red-500 mb-1" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <span className="text-[11px] text-red-400 font-bold">Upload Failed</span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setMessages((prev) => prev.filter((m) => m._id !== msg._id))
+                                          }}
+                                          className="mt-2 px-2.5 py-1 bg-red-650 hover:bg-red-750 active:scale-95 text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                                        >
+                                          Dismiss
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : msg.messageType === 'video' ? (
+                                  <div className="relative max-w-full overflow-hidden">
+                                    {msg.status === 'uploading' ? (
+                                      <div className="h-[180px] w-[300px] max-w-full bg-slate-950 flex flex-col items-center justify-center text-white relative">
+                                        <div className="w-10 h-10 border-3 border-accent border-t-transparent rounded-full animate-spin mb-2"></div>
+                                        <span className="text-[11px] font-bold">Uploading Video {msg.progress || 0}%</span>
+                                        <button
+                                          onClick={() => handleCancelUpload(msg._id, msg.fileAttachment.url)}
+                                          className="mt-3 px-3 py-1 bg-white/10 hover:bg-white/20 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    ) : msg.status === 'failed' ? (
+                                      <div className="h-[180px] w-[300px] max-w-full bg-slate-950 flex flex-col items-center justify-center text-white">
+                                        <span className="text-[11px] text-red-400 font-bold mb-2">Video Upload Failed</span>
+                                        <button
+                                          onClick={() => setMessages((prev) => prev.filter((m) => m._id !== msg._id))}
+                                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                                        >
+                                          Dismiss
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <video
+                                        src={msg.fileAttachment.url}
+                                        controls
+                                        preload="metadata"
+                                        className="max-h-[280px] w-auto max-w-full mx-auto"
+                                      />
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            )}
+
+                            {/* Message text with padding (only if text exists) */}
+                            {(!msg.fileAttachment || msg.text) && (
+                              <p className={`text-left break-words whitespace-pre-wrap select-text pb-3.5 ${
+                                isOwnMessage
+                                  ? (msg.isEdited ? 'pr-[115px]' : 'pr-[75px]')
+                                  : (msg.isEdited ? 'pr-[95px]' : 'pr-[58px]')
+                              }`}>
+                                {msg.text}
+                              </p>
+                            )}
+                          </>
                         )}
 
 
@@ -2331,6 +2452,16 @@ export default function ChatPage() {
           setActiveContextMenu(null)
         }
 
+        const handleDeleteEveryoneClick = () => {
+          handleDeleteEveryone(msg._id || msg.id)
+          setActiveContextMenu(null)
+        }
+
+        const handleDeleteMeClick = () => {
+          handleDeleteMe(msg._id || msg.id)
+          setActiveContextMenu(null)
+        }
+
         return (
           <div className="fixed inset-0 z-50 select-none pointer-events-none">
             {/* Desktop Context Menu (hidden on mobile, uses coordinates) */}
@@ -2364,6 +2495,32 @@ export default function ChatPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376A8.965 8.965 0 0 0 12 12.75a8.965 8.965 0 0 0-3.758 3.848m8.25-10.5V3.375c0-.621-.504-1.125-1.125-1.125h-9.75a1.125 1.125 0 0 0-1.125 1.125V15.75c0 .621.504 1.125 1.125 1.125h1.5m10.375-12h-9.75c-.621 0-1.125.504-1.125 1.125v9.75c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V4.875c0-.621-.504-1.125-1.125-1.125Z" />
                     </svg>
                     <span>Copy Text</span>
+                  </button>
+                </li>
+                {isOwn && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={handleDeleteEveryoneClick}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                      <span>Delete for Everyone</span>
+                    </button>
+                  </li>
+                )}
+                <li>
+                  <button
+                    type="button"
+                    onClick={handleDeleteMeClick}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9.14-1.42.02-1.06-8.9.18-1.16M9 9l.34 9.14 1.42.02 1.06-8.9-.18-1.16m-7.46 3.82h16.3M18.8 6.07A1.5 1.5 0 0 0 17.3 4.5H6.7a1.5 1.5 0 0 0-1.5 1.57L5.7 18.25A2 2 0 0 0 7.7 20h8.6a2 2 0 0 0 2-1.75l.5-12.18ZM10.5 4.5V3a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5v1.5h-5Z" />
+                    </svg>
+                    <span>Delete for Me</span>
                   </button>
                 </li>
               </ul>
@@ -2403,9 +2560,29 @@ export default function ChatPage() {
                     </svg>
                     <span className="text-sm">Copy Text</span>
                   </button>
+                  {isOwn && (
+                    <button
+                      onClick={handleDeleteEveryoneClick}
+                      className="w-full py-3.5 px-4 bg-red-500 text-white font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-md shadow-red-500/20"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                      </svg>
+                      <span className="text-sm">Delete for Everyone</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={handleDeleteMeClick}
+                    className="w-full py-3.5 px-4 bg-bg-app border border-border-app text-red-500 font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.34 9.14-1.42.02-1.06-8.9.18-1.16M9 9l.34 9.14 1.42.02 1.06-8.9-.18-1.16m-7.46 3.82h16.3M18.8 6.07A1.5 1.5 0 0 0 17.3 4.5H6.7a1.5 1.5 0 0 0-1.5 1.57L5.7 18.25A2 2 0 0 0 7.7 20h8.6a2 2 0 0 0 2-1.75l.5-12.18ZM10.5 4.5V3a1.5 1.5 0 0 1 1.5-1.5h2a1.5 1.5 0 0 1 1.5 1.5v1.5h-5Z" />
+                    </svg>
+                    <span className="text-sm">Delete for Me</span>
+                  </button>
                   <button
                     onClick={() => setActiveContextMenu(null)}
-                    className="w-full py-3.5 px-4 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                    className="w-full py-3.5 px-4 text-gray-500 hover:bg-gray-50 dark:hover:bg-slate-800 font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
                   >
                     Cancel
                   </button>

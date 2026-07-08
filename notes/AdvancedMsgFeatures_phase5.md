@@ -55,3 +55,41 @@ To ensure a secure, fair, and scalable messaging experience, we enforce the foll
 - **Layout Overlap Solution**: Designed dynamic padding and min-width to prevent collisions with absolute-positioned status indicators:
   - Own edited message padding: `pr-[115px]`
   - Own edited message min-width: `min-w-[130px]`
+
+---
+
+## 2. Message Deletion (Soft & Hard Deletion)
+
+### Concepts & Business Rules
+
+*   **Soft Deletion (Delete for Everyone & Delete for Me)**:
+    - Message document is **not** physically removed from the database.
+    - For *Delete for Everyone*, text is cleared and attachments nullified to prevent leak, setting `isDeleted: true`. The UI renders *"This message was deleted"*.
+    - For *Delete for Me*, the message is hidden for the choosing user but kept visible for others by pushing the user's ID to `deletedBy` list.
+*   **Hard Deletion**:
+    - Message document is physically purged from the database (using `deleteOne`/`deleteMany`).
+    - Used for disappearing messages, GDPR purges, or system cleanup. Any media files are deleted from cloud storage first.
+*   **Business Rules**:
+    1.  **Delete for Everyone**: Sender only, within a 24-hour window from creation.
+    2.  **Delete for Me**: Any participant, no time window restrictions.
+
+---
+
+### Delete for Me: Step-by-Step Flow
+1. **User Action**: The user clicks or taps "Delete for Me" in the desktop context menu or mobile bottom-sheet in [ChatPage.jsx](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/pages/ChatPage.jsx). This triggers the local handler `handleDeleteMeClick()`.
+2. **Immediate UI Update**: The top-level React controller `handleDeleteMe()` in [ChatPage.jsx](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/pages/ChatPage.jsx) updates the state (`setMessages` and `setPartners`) to filter out the deleted message ID instantly, so the user sees it vanish with no lag.
+3. **HTTP Client Request**: The client dispatches an HTTP request via the wrapper function `deleteMessageForMe()` in [chatService.js](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/services/chatService.js), hitting `DELETE /api/chat/messages/:messageId/me`.
+4. **API Routing**: The route is received in [chat.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/routes/chat.js) and calls `chatController.deleteMessageForMe`.
+5. **Database Transaction**: The controller `deleteMessageForMe()` in [chatController.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/controllers/chatController.js) executes a Mongoose update on the `Message` model in [messageModel.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/models/messageModel.js), using the `$addToSet` operator to push the user's ID into the message's `deletedBy` array. (No real-time socket events are broadcasted, keeping the operation private to this user).
+6. **Query History Filtering**: When fetching messages subsequently, `getMsgByChatid()` in [chatController.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/controllers/chatController.js) queries the database using `{ deletedBy: { $ne: currentUserId } }`. This ensures the database skips the message for the current user while returning it normally for other room members.
+
+---
+
+### Delete for Everyone: Step-by-Step Flow
+1. **User Action**: The message sender clicks or taps "Delete for Everyone" in the context menu of [ChatPage.jsx](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/pages/ChatPage.jsx). This triggers the local handler `handleDeleteEveryoneClick()`.
+2. **HTTP Client Request**: The frontend calls the API wrapper function `deleteMessageForEveryone()` in [chatService.js](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/services/chatService.js), dispatching a `DELETE` request to `/api/chat/messages/:messageId/everyone`.
+3. **API Routing**: The route is received in [chat.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/routes/chat.js) and calls `chatController.deleteMessageForEveryone`.
+4. **Database Transaction**: The controller `deleteMessageForEveryone()` in [chatController.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/controllers/chatController.js) checks sender authenticity and the 24-hour limit, then atomically updates the `Message` model in [messageModel.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/models/messageModel.js), setting `isDeleted` to `true`, clearing `text` to `""`, and nullifying `fileAttachment` properties to safely wipe the data.
+5. **Real-time Broadcast**: The controller broadcasts a `'message_deleted_everyone'` socket event via `socketService.js` to all participants currently joined in the conversation room.
+6. **Real-time UI Sync**: The socket listener in [ChatPage.jsx](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/pages/ChatPage.jsx) catches the event, executing `handleMessageDeleteEveryone()`. This maps matching IDs in the message state list and sets `isDeleted: true` to update the bubble in real-time.
+7. **UI Rendering**: The rendering engine in [ChatPage.jsx](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/pages/ChatPage.jsx) checks if `msg.isDeleted` is `true`, displaying a muted, italicised bubble reading *"This message was deleted"*, hiding all attachments and disabling click actions.

@@ -233,6 +233,30 @@ export async function editMessage(messageId, text) {
   return res.json()
 }
 
+export async function deleteMessageForEveryone(messageId) {
+  const res = await fetch(`${BASE_URL}/messages/${messageId}/everyone`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to delete message for everyone')
+  }
+  return res.json()
+}
+
+export async function deleteMessageForMe(messageId) {
+  const res = await fetch(`${BASE_URL}/messages/${messageId}/me`, {
+    method: 'DELETE',
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to delete message for me')
+  }
+  return res.json()
+}
+
 
 
 

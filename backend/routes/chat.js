@@ -24,6 +24,12 @@ router.post('/messages', chatController.sendMsg)
 // Edit a text message (Topic 1: Message Editing)
 router.patch('/messages/:messageId', chatController.editMsg)
 
+// Delete a message for everyone (global soft delete)
+router.delete('/messages/:messageId/everyone', chatController.deleteMessageForEveryone)
+
+// Delete a message for me (individual soft delete)
+router.delete('/messages/:messageId/me', chatController.deleteMessageForMe)
+
 // Get Cloudinary upload signature
 router.get('/upload-signature', chatController.getUploadSignature)
 

@@ -143,8 +143,8 @@ This document tracks both the concepts to learn and the implementation progress 
 ## Learn
 
 - [x] Message editing
-- [ ] Soft delete
-- [ ] Hard delete
+- [x] Soft delete
+- [x] Hard delete
 - [ ] Emoji reaction architecture
 - [ ] Message pinning
 - [ ] Search indexing
@@ -153,8 +153,8 @@ This document tracks both the concepts to learn and the implementation progress 
 
 - [ ] Reply
 - [x] Edit
-- [ ] Delete
-- [ ] Delete for everyone
+- [x] Delete
+- [x] Delete for everyone
 - [ ] Emoji reactions
 - [ ] Pin messages
 - [ ] Conversation search
