@@ -93,3 +93,33 @@ To ensure a secure, fair, and scalable messaging experience, we enforce the foll
 5. **Real-time Broadcast**: The controller broadcasts a `'message_deleted_everyone'` socket event via `socketService.js` to all participants currently joined in the conversation room.
 6. **Real-time UI Sync**: The socket listener in [ChatPage.jsx](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/pages/ChatPage.jsx) catches the event, executing `handleMessageDeleteEveryone()`. This maps matching IDs in the message state list and sets `isDeleted: true` to update the bubble in real-time.
 7. **UI Rendering**: The rendering engine in [ChatPage.jsx](file:///c:/Users/mrsan/Desktop/Boilerplate/frontend/src/pages/ChatPage.jsx) checks if `msg.isDeleted` is `true`, displaying a muted, italicised bubble reading *"This message was deleted"*, hiding all attachments and disabling click actions.
+
+---
+
+## 3. Emoji Reactions
+
+### Architecture & Data Model
+*   **Database Schema**: Stored as a nested subdocument array (`reactions`) directly inside the `Message` model:
+    ```javascript
+    reactions: [
+      {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+        emoji: { type: String, required: true },
+        reactedAt: { type: Date, default: Date.now }
+      }
+    ]
+    ```
+*   **Application Logic**:
+    - Restricted to 6 fixed preset emojis: `👍`, `❤️`, `😂`, `😮`, `😢`, `🙏`.
+    - Toggling an emoji (clicking an already reacted emoji by the same user) removes the reaction.
+    - Each user can have only one reaction per message. If they select a different emoji, it replaces their existing one.
+
+### How massive-scale platforms (like Slack or Discord) handle it
+At extreme scale (millions of concurrent users reacting to a single message in a public channel), the nested array approach hits constraints:
+
+*   **Document Size Limit**: MongoDB has a 16MB document limit. If 50,000 users react to one announcement message, the document will exceed this size.
+*   **Document Fragmentation**: Continuously adding elements to an array causes the document to grow physically on disk, forcing MongoDB to relocate the document, which degrades performance.
+
+**The Massive-Scale Solution**: For high-scale platforms, reactions are treated as a separate, normalized collection/table stored in databases designed for heavy writes (such as Cassandra, ScyllaDB, or DynamoDB), fronted by a cache layer (like Redis) that aggregates reaction counts.
+
+Since this project focuses on 1-to-1 and private group chats, the nested subdocuments pattern is the most optimal, performant, and clean implementation.

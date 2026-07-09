@@ -108,6 +108,12 @@ export function SocketProvider({ children }) {
     socket.emit('mark_as_read', { chatId })
   }
 
+  // Helper method to send a reaction to a message
+  const sendReaction = (chatId, messageId, emoji) => {
+    if (!socket) return
+    socket.emit('message_reaction', { chatId, messageId, emoji })
+  }
+
   return (
     <SocketContext.Provider
       value={{
@@ -117,6 +123,7 @@ export function SocketProvider({ children }) {
         sendMessageViaSocket,
         sendTypingStatus,
         markChatAsRead,
+        sendReaction,
       }}
     >
       {children}

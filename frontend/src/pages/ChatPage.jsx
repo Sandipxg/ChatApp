@@ -105,12 +105,30 @@ function formatTime(isoString) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-
+const getGroupedReactions = (reactions = [], currentUserId) => {
+  const groups = {}
+  reactions.forEach((r) => {
+    if (!groups[r.emoji]) {
+      groups[r.emoji] = {
+        emoji: r.emoji,
+        count: 0,
+        userIds: [],
+        hasReacted: false
+      }
+    }
+    groups[r.emoji].count += 1
+    groups[r.emoji].userIds.push(r.userId)
+    if (r.userId === currentUserId) {
+      groups[r.emoji].hasReacted = true
+    }
+  })
+  return Object.values(groups)
+}
 
 export default function ChatPage() {
   const { currentUser } = useAuth()
   const { chatWallpaper, enterToSend, playSounds } = useContext(ThemeContext)
-  const { socket, onlineUsers, typingStatus, sendMessageViaSocket, sendTypingStatus, markChatAsRead } = useSocket()
+  const { socket, onlineUsers, typingStatus, sendMessageViaSocket, sendTypingStatus, markChatAsRead, sendReaction } = useSocket()
   const location = useLocation()
   const navigate = useNavigate()
   
@@ -765,9 +783,18 @@ export default function ChatPage() {
       )
     }
 
+    const handleMessageReactionUpdated = ({ messageId, reactions }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          (m._id || m.id) === messageId ? { ...m, reactions } : m
+        )
+      )
+    }
+
     socket.on('new_message', handleNewMessage)
     socket.on('message_edit', handleMessageEdit)
     socket.on('message_deleted_everyone', handleMessageDeleteEveryone)
+    socket.on('message_reaction_updated', handleMessageReactionUpdated)
     socket.on('user_online', handleUserOnline)
     socket.on('user_offline', handleUserOffline)
     socket.on('messages_delivered', handleMessagesDelivered)
@@ -782,6 +809,7 @@ export default function ChatPage() {
       socket.off('new_message', handleNewMessage)
       socket.off('message_edit', handleMessageEdit)
       socket.off('message_deleted_everyone', handleMessageDeleteEveryone)
+      socket.off('message_reaction_updated', handleMessageReactionUpdated)
       socket.off('user_online', handleUserOnline)
       socket.off('user_offline', handleUserOffline)
       socket.off('messages_delivered', handleMessagesDelivered)
@@ -1509,7 +1537,9 @@ export default function ChatPage() {
                       key={msg._id || msg.id}
                       className={`flex items-start gap-2.5 max-w-[85%] ${
                         isOwnMessage ? 'self-end justify-end ml-auto' : 'self-start justify-start mr-auto'
-                      } ${isConsecutivePrev ? 'mt-0.5' : 'mt-3'} animate-bubble`}
+                      } ${isConsecutivePrev ? 'mt-0.5' : 'mt-3'} ${
+                        msg.reactions && msg.reactions.length > 0 ? 'mb-2.5' : ''
+                      } animate-bubble`}
                     >
                       {/* Avatar column (only for incoming messages) */}
                       {!isOwnMessage && (
@@ -1724,6 +1754,48 @@ export default function ChatPage() {
                             </span>
                           )}
                         </div>
+
+                        {/* Reaction Badges */}
+                        {msg.reactions && msg.reactions.length > 0 && (
+                          <div className={`absolute -bottom-2 flex items-center gap-1 select-none pointer-events-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs border border-gray-250/60 dark:border-slate-800/60 rounded-full py-0.5 px-2 shadow-sm z-20 hover:scale-105 transition-all ${
+                            isOwnMessage ? 'right-4' : 'left-4'
+                          }`}>
+                            {getGroupedReactions(msg.reactions, currentUser.id).map((group) => (
+                              <button
+                                key={group.emoji}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  const chatId = msg.chatId
+                                  sendReaction(chatId, msg._id || msg.id, group.emoji)
+                                  setMessages((prev) =>
+                                    prev.map((m) => {
+                                      if ((m._id || m.id) !== (msg._id || msg.id)) return m
+                                      const reactions = [...(m.reactions || [])]
+                                      const index = reactions.findIndex(r => r.userId === currentUser.id)
+                                      if (index > -1) {
+                                        if (reactions[index].emoji === group.emoji) {
+                                          reactions.splice(index, 1)
+                                        } else {
+                                          reactions[index] = { ...reactions[index], emoji: group.emoji, reactedAt: new Date().toISOString() }
+                                        }
+                                      } else {
+                                        reactions.push({ userId: currentUser.id, emoji: group.emoji, reactedAt: new Date().toISOString() })
+                                      }
+                                      return { ...m, reactions }
+                                    })
+                                  )
+                                }}
+                                className={`flex items-center gap-0.5 text-[11px] font-bold px-1 rounded-full cursor-pointer hover:bg-black/5 dark:hover:bg-white/10 ${
+                                  group.hasReacted ? 'text-accent dark:text-accent' : 'text-text-title'
+                                }`}
+                              >
+                                <span>{group.emoji}</span>
+                                {group.count > 1 && <span>{group.count}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -2470,6 +2542,45 @@ export default function ChatPage() {
               style={{ top: `${y}px`, left: `${x}px` }}
               className="hidden md:block fixed bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-gray-200/50 dark:border-slate-800/50 rounded-2xl shadow-xl w-48 p-1.5 pointer-events-auto animate-scale-up"
             >
+              {/* Emoji Reaction Bar */}
+              <div className="flex justify-between items-center px-2 py-1.5 border-b border-gray-150/40 dark:border-slate-800/50 mb-1">
+                {['👍', '❤️', '😂', '😮', '😢', '🙏'].map((emoji) => {
+                  const hasReacted = msg.reactions?.some(r => r.userId === currentUser.id && r.emoji === emoji)
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => {
+                        const chatId = msg.chatId
+                        sendReaction(chatId, msg._id || msg.id, emoji)
+                        setMessages((prev) =>
+                          prev.map((m) => {
+                            if ((m._id || m.id) !== (msg._id || msg.id)) return m
+                            const reactions = [...(m.reactions || [])]
+                            const index = reactions.findIndex(r => r.userId === currentUser.id)
+                            if (index > -1) {
+                              if (reactions[index].emoji === emoji) {
+                                reactions.splice(index, 1)
+                              } else {
+                                reactions[index] = { ...reactions[index], emoji, reactedAt: new Date().toISOString() }
+                              }
+                            } else {
+                              reactions.push({ userId: currentUser.id, emoji, reactedAt: new Date().toISOString() })
+                            }
+                            return { ...m, reactions }
+                          })
+                        )
+                        setActiveContextMenu(null)
+                      }}
+                      className={`text-lg p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg cursor-pointer transition-all active:scale-125 ${
+                        hasReacted ? 'bg-accent/15 dark:bg-accent/25 border border-accent/30' : 'border border-transparent'
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  )
+                })}
+              </div>
               <ul className="space-y-0.5">
                 {canEditMsg && (
                   <li>
@@ -2535,6 +2646,47 @@ export default function ChatPage() {
               >
                 {/* Visual drag handle */}
                 <div className="w-12 h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-2" onClick={() => setActiveContextMenu(null)}></div>
+                
+                {/* Mobile Emoji Reaction Bar */}
+                <div className="flex justify-between items-center px-4 py-2 bg-gray-50/50 dark:bg-slate-950/30 rounded-2xl border border-gray-150/40 dark:border-slate-800/50 my-1">
+                  {['👍', '❤️', '😂', '😮', '😢', '🙏'].map((emoji) => {
+                    const hasReacted = msg.reactions?.some(r => r.userId === currentUser.id && r.emoji === emoji)
+                    return (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => {
+                          const chatId = msg.chatId
+                          sendReaction(chatId, msg._id || msg.id, emoji)
+                          setMessages((prev) =>
+                            prev.map((m) => {
+                              if ((m._id || m.id) !== (msg._id || msg.id)) return m
+                              const reactions = [...(m.reactions || [])]
+                              const index = reactions.findIndex(r => r.userId === currentUser.id)
+                              if (index > -1) {
+                                if (reactions[index].emoji === emoji) {
+                                  reactions.splice(index, 1)
+                                } else {
+                                  reactions[index] = { ...reactions[index], emoji, reactedAt: new Date().toISOString() }
+                                }
+                              } else {
+                                reactions.push({ userId: currentUser.id, emoji, reactedAt: new Date().toISOString() })
+                              }
+                              return { ...m, reactions }
+                            })
+                          )
+                          setActiveContextMenu(null)
+                        }}
+                        className={`text-2xl p-1.5 hover:bg-black/5 dark:hover:bg-white/10 rounded-xl cursor-pointer transition-all active:scale-125 ${
+                          hasReacted ? 'bg-accent/15 dark:bg-accent/25 border border-accent/30' : 'border border-transparent'
+                        }`}
+                      >
+                        {emoji}
+                      </button>
+                    )
+                  })}
+                </div>
+
                 <div className="text-left mb-2">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Message Options</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1 italic">"{msg.text}"</p>

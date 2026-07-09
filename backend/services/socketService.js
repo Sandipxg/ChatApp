@@ -229,6 +229,98 @@ export function init(server) {
       }
     })
 
+    // Handle adding/removing emoji reactions
+    socket.on('message_reaction', async ({ chatId, messageId, emoji }, callback) => {
+      try {
+        if (!chatId || !messageId || !emoji) {
+          if (callback) callback({ error: 'chatId, messageId, and emoji are required' })
+          return
+        }
+
+        const ALLOWED_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏']
+        if (!ALLOWED_EMOJIS.includes(emoji)) {
+          if (callback) callback({ error: 'Invalid emoji reaction' })
+          return
+        }
+
+        // Verify conversation membership
+        const conversation = await Conversation.findOne({
+          _id: chatId,
+          'members.userId': userId
+        })
+        if (!conversation) {
+          if (callback) callback({ error: 'Unauthorized: You are not a member of this chat' })
+          return
+        }
+
+        // Find the message
+        const message = await Message.findOne({ _id: messageId, chatId })
+        if (!message) {
+          if (callback) callback({ error: 'Message not found' })
+          return
+        }
+
+        if (message.isDeleted) {
+          if (callback) callback({ error: 'Cannot react to deleted messages' })
+          return
+        }
+
+        // Check if user has already reacted to this message
+        const existingReactionIndex = message.reactions.findIndex(
+          (r) => r.userId.toString() === userId
+        )
+
+        let updatedReactions = [...message.reactions]
+
+        if (existingReactionIndex > -1) {
+          const currentEmoji = updatedReactions[existingReactionIndex].emoji
+          if (currentEmoji === emoji) {
+            // Clicked the same emoji -> remove it (toggle off)
+            updatedReactions.splice(existingReactionIndex, 1)
+          } else {
+            // Clicked a different emoji -> update it
+            updatedReactions[existingReactionIndex].emoji = emoji
+            updatedReactions[existingReactionIndex].reactedAt = new Date()
+          }
+        } else {
+          // No reaction by this user -> add new reaction
+          updatedReactions.push({
+            userId,
+            emoji,
+            reactedAt: new Date()
+          })
+        }
+
+        message.reactions = updatedReactions
+        await message.save()
+
+        // Broadcast updated reactions
+        if (conversation.isGroup) {
+          io.to(chatId).emit('message_reaction_updated', {
+            chatId,
+            messageId,
+            reactions: message.reactions
+          })
+        } else {
+          const otherMember = conversation.members.find(m => m.userId.toString() !== userId)
+          const target = io.to(userId)
+          if (otherMember) {
+            target.to(otherMember.userId.toString())
+          }
+          target.emit('message_reaction_updated', {
+            chatId,
+            messageId,
+            reactions: message.reactions
+          })
+        }
+
+        if (callback) callback({ success: true, reactions: message.reactions })
+      } catch (err) {
+        console.error('Error in message_reaction socket handler:', err)
+        if (callback) callback({ error: err.message || 'Failed to process reaction' })
+      }
+    })
+
     // Handle disconnection
     socket.on('disconnect', async () => {
       const userSockets = activeConnections.get(userId)
