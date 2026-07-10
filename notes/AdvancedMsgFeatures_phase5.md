@@ -123,3 +123,29 @@ At extreme scale (millions of concurrent users reacting to a single message in a
 **The Massive-Scale Solution**: For high-scale platforms, reactions are treated as a separate, normalized collection/table stored in databases designed for heavy writes (such as Cassandra, ScyllaDB, or DynamoDB), fronted by a cache layer (like Redis) that aggregates reaction counts.
 
 Since this project focuses on 1-to-1 and private group chats, the nested subdocuments pattern is the most optimal, performant, and clean implementation.
+
+---
+
+## 4. Message Pinning
+
+### Database Schema Approaches
+*   **Approach A: Embedded Array inside Conversation (WhatsApp/Telegram Style)**: Pinned message references are stored directly inside a `pinnedMessages` array inside the `Conversation` document.
+    *   *Pros*: Instant query (loads with conversation metadata), simple pin-limit validation.
+    *   *Cons*: Bloats conversation document if pinning is unlimited.
+*   **Approach B: Separate PinnedMessages Collection (Slack/Discord Style)**: Pins are stored in a standalone collection mapping `chatId` to `messageId`.
+    *   *Pros*: Scales to unlimited pins per conversation.
+    *   *Cons*: Requires a separate database lookup query to retrieve pins.
+
+### Implementation Details (Approach A)
+
+#### 1. Schema Definition
+Added the `pinnedMessages` array inside `conversationSchema` in [conversationModel.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/models/conversationModel.js):
+```javascript
+pinnedMessages: [
+  {
+    messageId: { type: mongoose.Schema.Types.ObjectId, ref: 'Message', required: true },
+    pinnedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    pinnedAt: { type: Date, default: Date.now }
+  }
+]
+```

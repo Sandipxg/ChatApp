@@ -146,6 +146,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState(null)
+  const [currentPinIndex, setCurrentPinIndex] = useState(0)
 
   // File Sharing state variables & refs
   const [activeUploads, setActiveUploads] = useState({})
@@ -391,6 +392,20 @@ export default function ChatPage() {
   // Scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Scroll to specific message
+  const handleScrollToMessage = (messageId) => {
+    const el = document.getElementById(`msg-${messageId}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('ring-4', 'ring-accent/40', 'scale-[1.02]', 'transition-all', 'duration-350')
+      setTimeout(() => {
+        el.classList.remove('ring-4', 'ring-accent/40', 'scale-[1.02]')
+      }, 2000)
+    } else {
+      alert('Message is not in the loaded chat history.')
+    }
   }
 
   // Custom Confirm Modal handlers
@@ -791,10 +806,22 @@ export default function ChatPage() {
       )
     }
 
+    const handleConversationPinsUpdated = ({ chatId, pinnedMessages }) => {
+      setPartners((prev) =>
+        prev.map((p) =>
+          (p.chatId || p.id) === chatId ? { ...p, pinnedMessages } : p
+        )
+      )
+      if (selectedPartner && (selectedPartner.chatId || selectedPartner.id) === chatId) {
+        setSelectedPartner((prev) => ({ ...prev, pinnedMessages }))
+      }
+    }
+
     socket.on('new_message', handleNewMessage)
     socket.on('message_edit', handleMessageEdit)
     socket.on('message_deleted_everyone', handleMessageDeleteEveryone)
     socket.on('message_reaction_updated', handleMessageReactionUpdated)
+    socket.on('conversation_pins_updated', handleConversationPinsUpdated)
     socket.on('user_online', handleUserOnline)
     socket.on('user_offline', handleUserOffline)
     socket.on('messages_delivered', handleMessagesDelivered)
@@ -810,6 +837,7 @@ export default function ChatPage() {
       socket.off('message_edit', handleMessageEdit)
       socket.off('message_deleted_everyone', handleMessageDeleteEveryone)
       socket.off('message_reaction_updated', handleMessageReactionUpdated)
+      socket.off('conversation_pins_updated', handleConversationPinsUpdated)
       socket.off('user_online', handleUserOnline)
       socket.off('user_offline', handleUserOffline)
       socket.off('messages_delivered', handleMessagesDelivered)
@@ -828,6 +856,7 @@ export default function ChatPage() {
     setLoadingMessages(true)
     setInputText('')
     setEditingMessage(null)
+    setCurrentPinIndex(0)
 
     try {
       const chatId = partner.chatId || [currentUser.id, partner.id].sort().join('_')
@@ -1461,6 +1490,107 @@ export default function ChatPage() {
               </div>
             </div>
 
+            {/* Pinned Messages Floating Banner */}
+            {selectedPartner?.pinnedMessages && selectedPartner.pinnedMessages.length > 0 && (() => {
+              const pins = selectedPartner.pinnedMessages
+              const pinIndex = Math.min(currentPinIndex, pins.length - 1)
+              const activePin = pins[pinIndex]
+              
+              if (!activePin) return null
+
+              const pinMessage = activePin.messageId
+              if (!pinMessage) return null
+
+              const senderName = pinMessage.senderId === currentUser.id 
+                ? 'You' 
+                : (pinMessage.senderId?.username || pinMessage.senderId?.name || selectedPartner.username || 'User')
+
+              const isOwnerOrAdmin = !selectedPartner.isGroup || selectedPartner.myRole === 'owner' || selectedPartner.myRole === 'admin'
+
+              return (
+                <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-border-app px-6 py-2.5 flex items-center justify-between text-xs text-text-title select-none z-10 transition-all shadow-sm animate-slide-down">
+                  <div className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer" onClick={() => handleScrollToMessage(pinMessage._id || pinMessage.id)}>
+                    <div className="p-1.5 rounded-lg bg-accent/8 dark:bg-accent/15 text-accent shrink-0">
+                      <svg className="w-3.5 h-3.5 rotate-45" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 4.5h-8v3l-2 2v3h12v-3l-2-2v-3zM12 12.5v7" />
+                      </svg>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 font-bold text-accent">
+                        <span>Pinned Message</span>
+                        {pins.length > 1 && (
+                          <span className="text-[10px] font-normal text-text-body opacity-60">
+                            ({pinIndex + 1} of {pins.length})
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-text-body opacity-80 truncate mt-0.5 max-w-full">
+                        <span className="font-semibold text-text-title">{senderName}: </span>
+                        {pinMessage.isDeleted 
+                          ? 'This message was deleted' 
+                          : (pinMessage.messageType === 'text' || !pinMessage.messageType)
+                            ? pinMessage.text
+                            : `[${pinMessage.messageType}] File`}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 ml-3">
+                    {pins.length > 1 && (
+                      <div className="flex items-center gap-0.5 bg-black/5 dark:bg-white/5 border border-gray-150/40 dark:border-slate-800/50 rounded-lg p-0.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCurrentPinIndex((prev) => (prev - 1 + pins.length) % pins.length)
+                          }}
+                          className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-gray-500 dark:text-gray-400"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCurrentPinIndex((prev) => (prev + 1) % pins.length)
+                          }}
+                          className="p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded cursor-pointer text-gray-500 dark:text-gray-400"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+
+                    {isOwnerOrAdmin && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const chatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+                          socket.emit('message_pin_toggle', { chatId, messageId: pinMessage._id || pinMessage.id }, (response) => {
+                            if (response.error) {
+                              alert(response.error)
+                            }
+                          })
+                        }}
+                        className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/20 text-gray-400 hover:text-red-500 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                        title="Unpin Message"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* MESSAGE FEED PANE (Wallpaper Applied) */}
             <div 
               onDragOver={(e) => {
@@ -1521,6 +1651,11 @@ export default function ChatPage() {
                     !msg.isDeleted &&
                     ((Date.now() - new Date(msg.createdAt).getTime()) < 10 * 60 * 1000)
 
+                  const isMessagePinned = selectedPartner?.pinnedMessages?.some(p => {
+                    const pId = p.messageId?._id || p.messageId
+                    return pId === (msg._id || msg.id)
+                  })
+
                   if (msg.messageType === 'system') {
                     return (
                       <div
@@ -1535,6 +1670,7 @@ export default function ChatPage() {
                   return (
                     <div
                       key={msg._id || msg.id}
+                      id={`msg-${msg._id || msg.id}`}
                       className={`flex items-start gap-2.5 max-w-[85%] ${
                         isOwnMessage ? 'self-end justify-end ml-auto' : 'self-start justify-start mr-auto'
                       } ${isConsecutivePrev ? 'mt-0.5' : 'mt-3'} ${
@@ -1578,6 +1714,10 @@ export default function ChatPage() {
                         isConsecutivePrev
                           ? (isOwnMessage ? 'rounded-tr-md' : 'rounded-tl-md')
                           : (isOwnMessage ? 'rounded-tr-none' : 'rounded-tl-none')
+                      } ${
+                        isMessagePinned 
+                          ? (isOwnMessage ? 'ring-2 ring-white/35 shadow-md bg-emerald-650 dark:bg-emerald-750' : 'border-accent/40 bg-accent/4 dark:bg-accent/8 ring-2 ring-accent/15 shadow-sm')
+                          : ''
                       }`}>
                         {/* Hover Action Menu */}
                         {canEdit && (
@@ -1722,6 +1862,11 @@ export default function ChatPage() {
                         <div className={`absolute bottom-1 right-2.5 flex items-center gap-1 text-[9px] select-none whitespace-nowrap ${
                           isOwnMessage ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'
                         }`}>
+                          {isMessagePinned && (
+                            <svg className={`w-2.5 h-2.5 rotate-45 mr-0.5 shrink-0 ${isOwnMessage ? 'text-white/80' : 'text-accent dark:text-accent'}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" title="Pinned Message">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 4.5h-8v3l-2 2v3h12v-3l-2-2v-3zM12 12.5v7" />
+                            </svg>
+                          )}
                           {msg.isEdited && (
                             <span className="opacity-80 italic">(edited)</span>
                           )}
@@ -2534,6 +2679,23 @@ export default function ChatPage() {
           setActiveContextMenu(null)
         }
 
+        const isPinned = selectedPartner?.pinnedMessages?.some(p => {
+          const pId = p.messageId?._id || p.messageId
+          return pId === (msg._id || msg.id)
+        })
+
+        const canPin = !selectedPartner.isGroup || selectedPartner.myRole === 'owner' || selectedPartner.myRole === 'admin'
+
+        const handlePinToggleClick = () => {
+          const chatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+          socket.emit('message_pin_toggle', { chatId, messageId: msg._id || msg.id }, (response) => {
+            if (response.error) {
+              alert(response.error)
+            }
+          })
+          setActiveContextMenu(null)
+        }
+
         return (
           <div className="fixed inset-0 z-50 select-none pointer-events-none">
             {/* Desktop Context Menu (hidden on mobile, uses coordinates) */}
@@ -2608,6 +2770,20 @@ export default function ChatPage() {
                     <span>Copy Text</span>
                   </button>
                 </li>
+                {canPin && (
+                  <li>
+                    <button
+                      type="button"
+                      onClick={handlePinToggleClick}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-text-title hover:bg-accent/8 dark:hover:bg-accent/12 hover:text-accent rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      <svg className="w-3.5 h-3.5 rotate-45 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 4.5h-8v3l-2 2v3h12v-3l-2-2v-3zM12 12.5v7" />
+                      </svg>
+                      <span>{isPinned ? 'Unpin Message' : 'Pin Message'}</span>
+                    </button>
+                  </li>
+                )}
                 {isOwn && (
                   <li>
                     <button
@@ -2712,6 +2888,17 @@ export default function ChatPage() {
                     </svg>
                     <span className="text-sm">Copy Text</span>
                   </button>
+                  {canPin && (
+                    <button
+                      onClick={handlePinToggleClick}
+                      className="w-full py-3.5 px-4 bg-bg-app border border-border-app text-text-body font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                    >
+                      <svg className="w-4 h-4 rotate-45 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 4.5h-8v3l-2 2v3h12v-3l-2-2v-3zM12 12.5v7" />
+                      </svg>
+                      <span className="text-sm">{isPinned ? 'Unpin Message' : 'Pin Message'}</span>
+                    </button>
+                  )}
                   {isOwn && (
                     <button
                       onClick={handleDeleteEveryoneClick}

@@ -321,6 +321,111 @@ export function init(server) {
       }
     })
 
+    // Handle toggling pinned status of a message
+    socket.on('message_pin_toggle', async ({ chatId, messageId }, callback) => {
+      try {
+        if (!chatId || !messageId) {
+          if (callback) callback({ error: 'chatId and messageId are required' })
+          return
+        }
+
+        // Find conversation and verify user membership
+        const conversation = await Conversation.findOne({
+          _id: chatId,
+          'members.userId': userId
+        })
+        if (!conversation) {
+          if (callback) callback({ error: 'Unauthorized: You are not a member of this chat' })
+          return
+        }
+
+        // If it's a group chat, verify user has owner or admin role
+        if (conversation.isGroup) {
+          const userMember = conversation.members.find(m => m.userId.toString() === userId)
+          if (!userMember || (userMember.role !== 'owner' && userMember.role !== 'admin')) {
+            if (callback) callback({ error: 'Unauthorized: Only admins or owners can pin messages in groups' })
+            return
+          }
+        }
+
+        // Find the message and make sure it belongs to the chatId
+        const message = await Message.findOne({ _id: messageId, chatId })
+        if (!message) {
+          if (callback) callback({ error: 'Message not found' })
+          return
+        }
+
+        if (message.isDeleted) {
+          if (callback) callback({ error: 'Cannot pin deleted messages' })
+          return
+        }
+
+        // Check if already pinned
+        const existingPinIndex = conversation.pinnedMessages.findIndex(
+          (p) => p.messageId.toString() === messageId
+        )
+
+        let updatedPinnedMessages = [...conversation.pinnedMessages]
+        let action = ''
+
+        if (existingPinIndex > -1) {
+          // Already pinned -> unpin it
+          updatedPinnedMessages.splice(existingPinIndex, 1)
+          action = 'unpinned'
+        } else {
+          // Not pinned -> pin it (enforce limit of 5)
+          if (updatedPinnedMessages.length >= 5) {
+            if (callback) callback({ error: 'Pin limit reached: You can pin up to 5 messages' })
+            return
+          }
+          updatedPinnedMessages.push({
+            messageId,
+            pinnedBy: userId,
+            pinnedAt: new Date()
+          })
+          action = 'pinned'
+        }
+
+        conversation.pinnedMessages = updatedPinnedMessages
+        await conversation.save()
+
+        // Populate pinnedMessages.messageId to send message details (sender details, text, etc.)
+        const populatedConversation = await Conversation.findById(chatId)
+          .populate({
+            path: 'pinnedMessages.messageId',
+            model: 'Message',
+            populate: {
+              path: 'senderId',
+              model: 'User',
+              select: 'username name image'
+            }
+          })
+
+        // Broadcast updated list to the chat room
+        if (conversation.isGroup) {
+          io.to(chatId).emit('conversation_pins_updated', {
+            chatId,
+            pinnedMessages: populatedConversation.pinnedMessages
+          })
+        } else {
+          const otherMember = conversation.members.find(m => m.userId.toString() !== userId)
+          const target = io.to(userId)
+          if (otherMember) {
+            target.to(otherMember.userId.toString())
+          }
+          target.emit('conversation_pins_updated', {
+            chatId,
+            pinnedMessages: populatedConversation.pinnedMessages
+          })
+        }
+
+        if (callback) callback({ success: true, action, pinnedMessages: populatedConversation.pinnedMessages })
+      } catch (err) {
+        console.error('Error in message_pin_toggle socket handler:', err)
+        if (callback) callback({ error: err.message || 'Failed to toggle pin' })
+      }
+    })
+
     // Handle disconnection
     socket.on('disconnect', async () => {
       const userSockets = activeConnections.get(userId)
