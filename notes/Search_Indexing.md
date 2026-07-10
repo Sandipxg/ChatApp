@@ -10,7 +10,7 @@ This document outlines the three main architectural approaches to implementing s
 *   **Concept**: Pattern matching using regular expressions directly on text fields (e.g., `{ text: { $regex: query, $options: 'i' } }`).
 *   **Pros**: Zero write overhead, no disk/memory storage costs, and extremely simple to code.
 *   **Cons**:
-    > [!WARNING]
+    > [!CAUTION]
     > **Performance Bottleneck (Full Table Scan)**: If executed globally across the entire database, it triggers a collection-wide scan, reading every single document in memory. This causes massive database CPU spikes. It is only viable when filtered strictly by an indexed `chatId` to isolate the scan to a single conversation.
 
 ---
@@ -19,7 +19,7 @@ This document outlines the three main architectural approaches to implementing s
 *   **Concept**: MongoDB automatically parses sentences into root words (tokenization & stemming) and maintains a hidden inverted index map pointing words to document IDs.
 *   **Pros**: Rapid lookup speeds for word search without reading text documents during search.
 *   **Cons**:
-    > [!WARNING]
+    > [!CAUTION]
     > **Write Amplification & Storage Overhead**: Every message insertion requires updating the index tree. This slows down write speeds (`Message.create()`), increases RAM consumption (as indexes must fit in memory), and increases disk usage by storing duplicate string keys.
     > 
     > **No Typo Tolerance**: Searching for `"dinosaur"` will not match `"dinosour"`. Typo matching is non-existent.
@@ -31,7 +31,9 @@ This document outlines the three main architectural approaches to implementing s
 *   **Pros**: Blazing fast search, phonetic matching, typo tolerance, advanced filters, and zero CPU load on the primary transactional database.
 *   **Cons**:
     > [!CAUTION]
-    > **High Complexity & Cost**: You must manage and pay for separate Elasticsearch nodes (highly RAM-heavy). Sync workers must handle eventual consistency lags, and updates/deletions of messages must be manually synced to prevent deleted messages from leaking in search results.
+    > **High Complexity & Infrastructure Cost**:
+    > *   **Synchronization overhead**: Sync workers must handle eventual consistency lags, and updates/deletions of messages must be manually synced to prevent deleted messages from leaking in search results.
+    > *   **High Hosting Costs**: Elasticsearch requires significant RAM (usually minimum 2GB to 4GB per node) to keep the search index in memory. This adds another server to your monthly hosting bill.
 
 ---
 
