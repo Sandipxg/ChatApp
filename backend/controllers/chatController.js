@@ -261,6 +261,14 @@ export async function getMsgByChatid(req, res, next) {
     const messages = await Message.find(query)
       .sort({ _id: -1 })
       .limit(parsedLimit)
+      .populate({
+        path: 'parentMessageId',
+        select: 'text messageType senderId isDeleted fileAttachment',
+        populate: {
+          path: 'senderId',
+          select: 'name username'
+        }
+      })
 
     // Reverse documents in memory so that the final returned array is chronological (oldest first)
     messages.reverse()
@@ -400,7 +408,7 @@ export async function getUploadSignature(req, res, next) {
 export async function createMediaMessage(req, res, next) {
   try {
     const senderId = req.userId
-    const { receiverId, text, messageType, fileAttachment } = req.body
+    const { receiverId, text, messageType, fileAttachment, parentMessageId } = req.body
 
     if (!receiverId) {
       throw new AppError('Receiver ID is required', 400)
@@ -455,12 +463,24 @@ export async function createMediaMessage(req, res, next) {
       text: text || '',
       messageType,
       fileAttachment,
+      parentMessageId: parentMessageId || null,
       status: isGroup ? 'sent' : (isUserOnline(receiverId) ? 'delivered' : 'sent'),
     })
 
     // 3. Update lastMessage on conversation
     conversation.lastMessage = message._id
     await conversation.save()
+
+    // Populate parentMessageId before broadcasting and responding
+    const populatedMessage = await Message.findById(message._id)
+      .populate({
+        path: 'parentMessageId',
+        select: 'text messageType senderId isDeleted fileAttachment',
+        populate: {
+          path: 'senderId',
+          select: 'name username'
+        }
+      })
 
     // 4. Broadcast in real time via Socket.IO
     const io = getIo()
@@ -469,15 +489,15 @@ export async function createMediaMessage(req, res, next) {
         // Find sender's name to match standard group socket payload
         const sender = await User.findById(senderId).select('name')
         io.to(chatId).emit('new_message', {
-          ...message.toObject(),
+          ...populatedMessage.toObject(),
           senderName: sender ? sender.name : 'User'
         })
       } else {
-        io.to(senderId).to(receiverId).emit('new_message', message)
+        io.to(senderId).to(receiverId).emit('new_message', populatedMessage)
       }
     }
 
-    res.status(201).json(message)
+    res.status(201).json(populatedMessage)
   } catch (error) {
     next(error)
   }

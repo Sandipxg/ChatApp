@@ -201,13 +201,13 @@ export function uploadDirectToCloudinary(file, signatureData, onProgress, abortS
   })
 }
 
-export async function sendMediaMessage(receiverId, text, type, fileAttachment) {
+export async function sendMediaMessage(receiverId, text, type, fileAttachment, parentMessageId = null) {
   const res = await fetch(`${BASE_URL}/messages/media`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ receiverId, text, messageType: type, fileAttachment }),
+    body: JSON.stringify({ receiverId, text, messageType: type, fileAttachment, parentMessageId }),
     credentials: 'include',
   })
   if (!res.ok) {

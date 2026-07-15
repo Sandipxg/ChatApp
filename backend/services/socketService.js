@@ -92,7 +92,7 @@ export function init(server) {
     // Handle incoming message sent via WebSocket
     socket.on('send_message', async (payload, callback) => {
       try {
-        const { receiverId, text } = payload
+        const { receiverId, text, parentMessageId } = payload
         if (!receiverId || !text) {
           if (callback) callback({ error: 'Receiver ID and text are required' })
           return
@@ -132,6 +132,7 @@ export function init(server) {
           senderId: userId,
           receiverId: isGroup ? null : receiverId,
           text,
+          parentMessageId: parentMessageId || null,
           status: isGroup ? 'sent' : (isUserOnline(receiverId) ? 'delivered' : 'sent'),
         })
 
@@ -139,18 +140,29 @@ export function init(server) {
         conversation.lastMessage = message._id
         await conversation.save()
 
+        // Populate parentMessageId for rendering quoted reply preview on other clients
+        const populatedMessage = await Message.findById(message._id)
+          .populate({
+            path: 'parentMessageId',
+            select: 'text messageType senderId isDeleted fileAttachment',
+            populate: {
+              path: 'senderId',
+              select: 'name username'
+            }
+          })
+
         if (isGroup) {
           // Broadcast message to group room, including the senderName
           io.to(chatId).emit('new_message', {
-            ...message.toObject(),
+            ...populatedMessage.toObject(),
             senderName: socket.username
           })
         } else {
           // Broadcast new message to both participants
-          io.to(userId).to(receiverId).emit('new_message', message)
+          io.to(userId).to(receiverId).emit('new_message', populatedMessage)
         }
 
-        if (callback) callback({ success: true, message })
+        if (callback) callback({ success: true, message: populatedMessage })
       } catch (error) {
         console.error('Error saving or sending socket message:', error)
         if (callback) callback({ error: error.message || 'Failed to send message' })

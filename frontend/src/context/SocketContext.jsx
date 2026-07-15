@@ -77,12 +77,12 @@ export function SocketProvider({ children }) {
   }, [currentUser])
 
   // Helper method to emit and await message send status
-  const sendMessageViaSocket = (receiverId, text) => {
+  const sendMessageViaSocket = (receiverId, text, parentMessageId = null) => {
     return new Promise((resolve, reject) => {
       if (!socket) {
         return reject(new Error('Socket connection is offline'))
       }
-      socket.emit('send_message', { receiverId, text }, (response) => {
+      socket.emit('send_message', { receiverId, text, parentMessageId }, (response) => {
         if (response.error) {
           reject(new Error(response.error))
         } else {

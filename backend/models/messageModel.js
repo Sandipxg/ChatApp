@@ -89,7 +89,12 @@ const messageSchema = new mongoose.Schema(
           default: Date.now
         }
       }
-    ]
+    ],
+    parentMessageId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Message',
+      default: null
+    }
   },
   {
     timestamps: true,

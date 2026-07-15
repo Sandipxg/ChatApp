@@ -147,6 +147,7 @@ export default function ChatPage() {
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [error, setError] = useState(null)
   const [currentPinIndex, setCurrentPinIndex] = useState(0)
+  const [replyingToMessage, setReplyingToMessage] = useState(null)
 
   // File Sharing state variables & refs
   const [activeUploads, setActiveUploads] = useState({})
@@ -907,7 +908,9 @@ export default function ChatPage() {
     }
 
     try {
-      await sendMessageViaSocket(selectedPartner.id, textToSend)
+      const parentId = replyingToMessage?._id || replyingToMessage?.id || null
+      setReplyingToMessage(null)
+      await sendMessageViaSocket(selectedPartner.id, textToSend, parentId)
       setTimeout(scrollToBottom, 50)
     } catch (err) {
       console.error('Error sending message via socket:', err)
@@ -1006,7 +1009,9 @@ export default function ChatPage() {
     const { file, url, type } = mediaPreview
     const text = captionText.trim()
     setMediaPreview(null)
-    startMediaUpload(file, url, type, text)
+    const parentMsg = replyingToMessage
+    setReplyingToMessage(null)
+    startMediaUpload(file, url, type, text, parentMsg)
   }
 
   // Abort ongoing upload
@@ -1022,7 +1027,7 @@ export default function ChatPage() {
   }
 
   // Upload runner
-  const startMediaUpload = async (file, localUrl, type, text) => {
+  const startMediaUpload = async (file, localUrl, type, text, parentMessage = null) => {
     const tempId = `temp-${Date.now()}`
     const abortController = new AbortController()
 
@@ -1038,6 +1043,7 @@ export default function ChatPage() {
       receiverId: selectedPartner.isGroup ? null : selectedPartner.id,
       text: text,
       messageType: type,
+      parentMessageId: parentMessage,
       status: 'uploading',
       progress: 0,
       fileAttachment: {
@@ -1106,7 +1112,8 @@ export default function ChatPage() {
         selectedPartner.id,
         text,
         type,
-        finalFileAttachment
+        finalFileAttachment,
+        parentMessage?._id || parentMessage?.id || null
       )
 
       setActiveUploads((prev) => {
@@ -1758,6 +1765,38 @@ export default function ChatPage() {
                           </p>
                         ) : (
                           <>
+                            {/* Reply Preview Card */}
+                            {msg.parentMessageId && (() => {
+                              const parentSenderId = msg.parentMessageId.senderId?._id || msg.parentMessageId.senderId
+                              const parentSenderName = parentSenderId === currentUser.id 
+                                ? 'You' 
+                                : (msg.parentMessageId.senderName || msg.parentMessageId.senderId?.name || contacts.find(c => c.id === parentSenderId)?.name || 'User')
+                              return (
+                                <div 
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleScrollToMessage(msg.parentMessageId._id || msg.parentMessageId.id)
+                                  }}
+                                  className={`mb-2.5 p-2 rounded-xl text-xs border-l-3 text-left cursor-pointer transition-all select-none hover:bg-black/8 dark:hover:bg-white/8 ${
+                                    isOwnMessage 
+                                      ? 'bg-black/12 border-white/60 text-white/90' 
+                                      : 'bg-black/4 dark:bg-white/4 border-accent text-text-title'
+                                  }`}
+                                >
+                                  <div className="font-extrabold text-[10px] opacity-90 truncate mb-0.5">
+                                    {parentSenderName}
+                                  </div>
+                                  <div className="opacity-85 truncate text-[11px] max-w-full">
+                                    {msg.parentMessageId.isDeleted 
+                                      ? 'This message was deleted' 
+                                      : (msg.parentMessageId.messageType === 'text' || !msg.parentMessageId.messageType)
+                                        ? msg.parentMessageId.text
+                                        : `[${msg.parentMessageId.messageType}] File`}
+                                  </div>
+                                </div>
+                              )
+                            })()}
+
                             {/* Media Attachment Content */}
                             {msg.fileAttachment && msg.fileAttachment.url && (
                               <div className="mb-2 max-w-full overflow-hidden rounded-xl border border-black/5 dark:border-white/5 bg-black/5 dark:bg-black/20">
@@ -1972,6 +2011,40 @@ export default function ChatPage() {
                   </button>
                 </div>
               )}
+              {replyingToMessage && (() => {
+                const parentSenderId = replyingToMessage.senderId?._id || replyingToMessage.senderId
+                const senderName = parentSenderId === currentUser.id 
+                  ? 'You' 
+                  : (replyingToMessage.senderName || contacts.find(c => c.id === parentSenderId)?.name || 'User')
+                return (
+                  <div className="flex items-center justify-between bg-black/5 dark:bg-white/5 px-4 py-2.5 rounded-2xl mb-3 text-xs text-text-title animate-fade-in border border-border-app">
+                    <div className="flex items-center gap-2.5 truncate flex-1">
+                      <div className="p-1 rounded-md bg-accent/10 text-accent">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                        </svg>
+                      </div>
+                      <div className="truncate flex-1">
+                        <span className="font-bold text-accent">Replying to {senderName}:</span>
+                        <span className="truncate italic opacity-85 ml-1.5">
+                          {replyingToMessage.isDeleted 
+                            ? 'This message was deleted' 
+                            : (replyingToMessage.messageType === 'text' || !replyingToMessage.messageType)
+                              ? `"${replyingToMessage.text}"`
+                              : `[${replyingToMessage.messageType}] File`}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setReplyingToMessage(null)}
+                      className="text-gray-400 hover:text-red-500 font-bold transition-all px-1.5 py-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-800 ml-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )
+              })()}
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend() }}
                 className="flex items-center gap-3"
@@ -2663,9 +2736,16 @@ export default function ChatPage() {
           setActiveContextMenu(null)
         }
 
+        const handleReplyClick = () => {
+          setReplyingToMessage(msg)
+          setEditingMessage(null)
+          setActiveContextMenu(null)
+        }
+
         const handleEditClick = () => {
           setEditingMessage(msg)
           setInputText(msg.text)
+          setReplyingToMessage(null)
           setActiveContextMenu(null)
         }
 
@@ -2758,6 +2838,18 @@ export default function ChatPage() {
                     </button>
                   </li>
                 )}
+                <li>
+                  <button
+                    type="button"
+                    onClick={handleReplyClick}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-text-title hover:bg-accent/8 dark:hover:bg-accent/12 hover:text-accent rounded-xl transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <svg className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                    </svg>
+                    <span>Reply</span>
+                  </button>
+                </li>
                 <li>
                   <button
                     type="button"
@@ -2879,6 +2971,15 @@ export default function ChatPage() {
                       <span className="text-sm">Edit Message</span>
                     </button>
                   )}
+                  <button
+                    onClick={handleReplyClick}
+                    className="w-full py-3.5 px-4 bg-bg-app border border-border-app text-text-body font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"
+                  >
+                    <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                    </svg>
+                    <span className="text-sm">Reply</span>
+                  </button>
                   <button
                     onClick={handleCopy}
                     className="w-full py-3.5 px-4 bg-bg-app border border-border-app text-text-body font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98"

@@ -151,12 +151,12 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Build
 
-- [ ] Reply
+- [x] Reply
 - [x] Edit
 - [x] Delete
 - [x] Delete for everyone
 - [x] Emoji reactions
-- [ ] Pin messages
+- [x] Pin messages
 - [ ] Conversation search
 
 ---

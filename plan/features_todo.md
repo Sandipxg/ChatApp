@@ -73,11 +73,11 @@ This document tracks the implementation checklist for the ChatApp project, mappe
 ## ⚙️ Phase 5: Advanced Message Actions
 *WhatsApp/Telegram-style message interactive features*
 
-- [ ] **Reply**: Quote another message in a reply preview card
-- [ ] **Edit**: Edit message content within a time limit (e.g. 15 minutes) and label it as "(edited)"
-- [ ] **Delete**: Delete messages ("Delete for me" vs "Delete for everyone")
-- [ ] **Emoji Reactions**: Allow users to click and react to messages with a subset of emojis
-- [ ] **Pin Messages**: Pin important messages to the top of a conversation window
+- [x] **Reply**: Quote another message in a reply preview card
+- [x] **Edit**: Edit message content within a time limit (e.g. 15 minutes) and label it as "(edited)"
+- [x] **Delete**: Delete messages ("Delete for me" vs "Delete for everyone")
+- [x] **Emoji Reactions**: Allow users to click and react to messages with a subset of emojis
+- [x] **Pin Messages**: Pin important messages to the top of a conversation window
 - [ ] **Search**: Add a local search bar in ChatPage to find messages in the current conversation
 
 ---

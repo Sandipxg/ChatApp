@@ -149,3 +149,28 @@ pinnedMessages: [
   }
 ]
 ```
+
+---
+
+## 5. Message Replies
+
+### Architectural Approach
+To distinguish between normal messages and reply messages, we store a parent pointer directly within each message document. This is highly performant and keeps our database normalized, avoiding unbounded arrays on parent messages.
+
+### Schema Definition
+Added the `parentMessageId` field to the `messageSchema` in [messageModel.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/models/messageModel.js):
+
+```javascript
+parentMessageId: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'Message',
+  default: null
+}
+```
+
+### Implementation Details
+*   **Database Normalization**: We store only the `ObjectId` of the parent message in the database.
+*   **Populate on Fetch**: When querying message history or broadcasting a new message, the backend uses Mongoose `.populate({ path: 'parentMessageId', populate: { path: 'senderId' } })` to dynamically resolve the parent message text, type, and original sender information in a single query.
+*   **Soft Deletion**: If the parent message is soft-deleted (`isDeleted: true`), the populated object reflects this status, and the frontend automatically renders the reply preview card as *"This message was deleted"*.
+*   **Frontend UX**: Inside the message bubble, we render the parent's sender name and a snippet of the parent message text/media type. Clicking on the preview card triggers smooth scroll to highlight the original message.
+
