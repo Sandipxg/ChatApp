@@ -414,7 +414,7 @@ export async function createMediaMessage(req, res, next) {
       throw new AppError('Receiver ID is required', 400)
     }
 
-    if (!messageType || !['image', 'video'].includes(messageType)) {
+    if (!messageType || !['image', 'video', 'audio'].includes(messageType)) {
       throw new AppError('Invalid or missing messageType', 400)
     }
 

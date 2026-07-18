@@ -150,7 +150,7 @@ export function uploadDirectToCloudinary(file, signatureData, onProgress, abortS
     const formData = new FormData()
 
     const { signature, timestamp, apiKey, cloudName, folder } = signatureData
-    const resourceType = file.type.startsWith('video/') ? 'video' : 'image'
+    const resourceType = file.type.startsWith('video/') || file.type.startsWith('audio/') ? 'video' : 'image'
 
     formData.append('file', file)
     formData.append('api_key', apiKey)

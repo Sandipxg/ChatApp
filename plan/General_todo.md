@@ -165,19 +165,19 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] MediaRecorder API
-- [ ] Audio encoding
-- [ ] WaveSurfer.js
-- [ ] Blob handling
+- [x] MediaRecorder API
+- [x] Audio encoding
+- [x] WaveSurfer.js
+- [x] Blob handling
 
 ## Build
 
-- [ ] Voice recording
-- [ ] Timer
-- [ ] Cancel recording
-- [ ] Waveform
-- [ ] Playback controls
-- [ ] Playback speed
+- [x] Voice recording
+- [x] Timer
+- [x] Cancel recording
+- [x] Waveform
+- [x] Playback controls
+- [x] Playback speed
 
 ---
 

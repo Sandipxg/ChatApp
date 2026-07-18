@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import ThemeContext from '../context/ThemeContext'
 import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage, deleteMessageForEveryone, deleteMessageForMe } from '../services/chatService'
 import { useSocket } from '../context/SocketContext'
+import AudioPlayer from '../components/AudioPlayer'
 
 // Play popup message dispatch sound using Web Audio API synthesis (pure offline solution)
 function playPopSound() {
@@ -156,6 +157,13 @@ export default function ChatPage() {
   const [lightboxImage, setLightboxImage] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef(null)
+
+  // Voice recording state variables & refs
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordingDuration, setRecordingDuration] = useState(0)
+  const [mediaRecorder, setMediaRecorder] = useState(null)
+  const [audioChunks, setAudioChunks] = useState([])
+  const recordingTimerRef = useRef(null)
 
 
   // Group creation states
@@ -1026,6 +1034,97 @@ export default function ChatPage() {
     }
   }
 
+  // --- Voice Notes Audio Recording Logic ---
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const chunks = []
+      
+      let mimeType = 'audio/webm'
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'audio/mp4' // fallback for safari
+      }
+
+      const recorder = new MediaRecorder(stream, { mimeType })
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          chunks.push(e.data)
+        }
+      }
+
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop())
+        
+        const audioBlob = new Blob(chunks, { type: mimeType })
+        
+        if (audioBlob.size < 200 || chunks.length === 0) {
+          console.warn('Voice recording is too short or empty.')
+          return
+        }
+
+        const ext = mimeType.split('/')[1].split(';')[0]
+        const file = new File([audioBlob], `voicenote-${Date.now()}.${ext}`, {
+          type: mimeType,
+          lastModified: Date.now()
+        })
+        
+        const localUrl = URL.createObjectURL(audioBlob)
+        startMediaUpload(file, localUrl, 'audio', '')
+      }
+
+      setAudioChunks(chunks)
+      setMediaRecorder(recorder)
+      setIsRecording(true)
+      setRecordingDuration(0)
+
+      recorder.start(250)
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration((prev) => prev + 1)
+      }, 1000)
+
+    } catch (err) {
+      console.error('Error starting media recorder:', err)
+      alert('Could not access microphone. Please check permissions.')
+    }
+  }
+
+  const stopRecording = (shouldSend = true) => {
+    if (!mediaRecorder || mediaRecorder.state === 'inactive') return
+    
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current)
+      recordingTimerRef.current = null
+    }
+
+    if (shouldSend) {
+      mediaRecorder.stop()
+    } else {
+      mediaRecorder.onstop = () => {
+        mediaRecorder.stream.getTracks().forEach(track => track.stop())
+      }
+      mediaRecorder.stop()
+    }
+
+    setIsRecording(false)
+    setMediaRecorder(null)
+  }
+
+  // Cleanup on unmount or chat switch
+  useEffect(() => {
+    return () => {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (selectedPartner && isRecording) {
+      stopRecording(false)
+    }
+  }, [selectedPartner])
+
   // Upload runner
   const startMediaUpload = async (file, localUrl, type, text, parentMessage = null) => {
     const tempId = `temp-${Date.now()}`
@@ -1079,9 +1178,11 @@ export default function ChatPage() {
         }
 
         finalFileAttachment = {
-          url: type === 'video' 
-            ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' 
-            : `https://picsum.photos/seed/${Math.random().toString(36).substring(7)}/800/600`,
+          url: type === 'audio'
+            ? 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'
+            : type === 'video'
+              ? 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4'
+              : `https://picsum.photos/seed/${Math.random().toString(36).substring(7)}/800/600`,
           name: file.name,
           size: file.size,
           mimeType: file.type
@@ -1879,6 +1980,48 @@ export default function ChatPage() {
                                       />
                                     )}
                                   </div>
+                                ) : msg.messageType === 'audio' ? (
+                                  <div className="relative max-w-full overflow-hidden">
+                                    {msg.status === 'uploading' ? (
+                                      <div className={`p-3 flex flex-col justify-center gap-2 rounded-xl w-72 xs:w-80 sm:w-96 select-none ${
+                                        isOwnMessage 
+                                          ? 'bg-black/5 text-white/90' 
+                                          : 'bg-black/5 text-text-body'
+                                      }`}>
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0"></div>
+                                          <span className="text-xs font-bold">Uploading Audio {msg.progress || 0}%</span>
+                                        </div>
+                                        <button
+                                          onClick={() => handleCancelUpload(msg._id, msg.fileAttachment.url)}
+                                          className={`mt-1.5 px-3 py-1 self-start text-[10px] font-bold rounded-lg transition-all cursor-pointer ${
+                                            isOwnMessage ? 'bg-white/20 hover:bg-white/30' : 'bg-black/10 hover:bg-black/15'
+                                          }`}
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    ) : msg.status === 'failed' ? (
+                                      <div className={`p-3 flex flex-col justify-center gap-2 rounded-xl w-72 xs:w-80 sm:w-96 select-none ${
+                                        isOwnMessage 
+                                          ? 'bg-black/5 text-white/90' 
+                                          : 'bg-black/5 text-text-body'
+                                      }`}>
+                                        <span className="text-xs text-red-550 dark:text-red-400 font-bold">Audio Upload Failed</span>
+                                        <button
+                                          onClick={() => setMessages((prev) => prev.filter((m) => m._id !== msg._id))}
+                                          className="px-2.5 py-1 self-start bg-red-600 hover:bg-red-700 text-[10px] font-bold rounded-md transition-all text-white cursor-pointer"
+                                        >
+                                          Dismiss
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <AudioPlayer
+                                        audioUrl={msg.fileAttachment.url}
+                                        isOwnMessage={isOwnMessage}
+                                      />
+                                    )}
+                                  </div>
                                 ) : null}
                               </div>
                             )}
@@ -2047,58 +2190,101 @@ export default function ChatPage() {
               })()}
               <form 
                 onSubmit={(e) => { e.preventDefault(); handleSend() }}
-                className="flex items-center gap-3"
+                className="flex items-center gap-3 w-full"
               >
-                {/* Attachment trigger */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="p-3.5 rounded-full text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 transition-all cursor-pointer flex-shrink-0 bg-bg-app border border-border-app"
-                  title="Attach Image or Video"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
-                  </svg>
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleFileSelect(file)
-                    e.target.value = ''
-                  }}
-                  accept="image/*,video/*"
-                  className="hidden"
-                />
+                {isRecording ? (
+                  <div className="flex-1 flex items-center justify-between bg-bg-app border border-border-app rounded-full px-6 py-3 transition-all animate-pulse duration-1000">
+                    <div className="flex items-center gap-2.5 text-sm font-semibold text-red-500">
+                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
+                      <span>Recording {(() => {
+                        const m = Math.floor(recordingDuration / 60)
+                        const s = recordingDuration % 60
+                        return `${m}:${s.toString().padStart(2, '0')}`
+                      })()}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => stopRecording(false)}
+                      className="text-xs font-bold text-gray-500 hover:text-red-500 transition-all cursor-pointer bg-transparent border-0 px-2 py-1"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Attachment trigger */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="p-3.5 rounded-full text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 transition-all cursor-pointer flex-shrink-0 bg-bg-app border border-border-app"
+                      title="Attach Image or Video"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
+                      </svg>
+                    </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleFileSelect(file)
+                        e.target.value = ''
+                      }}
+                      accept="image/*,video/*"
+                      className="hidden"
+                    />
 
-                {/* Input block */}
-                <input
-                  type="text"
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                  placeholder="Type a message..."
-                  className="flex-1 bg-bg-app border border-border-app focus:bg-bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 text-sm text-text-title placeholder-gray-400 dark:placeholder-gray-500 rounded-full px-6 py-3.5 transition-all select-text"
-                />
+                    {/* Input block */}
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onPaste={handlePaste}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-bg-app border border-border-app focus:bg-bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 text-sm text-text-title placeholder-gray-400 dark:placeholder-gray-500 rounded-full px-6 py-3.5 transition-all select-text"
+                    />
+                  </>
+                )}
 
-
-                {/* Send Button — accent glow */}
-                <button
-                  type="submit"
-                  disabled={!inputText.trim()}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center text-white transition-all active:scale-95 flex-shrink-0 ${
-                    inputText.trim()
-                      ? 'bg-gradient-to-br from-accent to-indigo-600 shadow-lg shadow-accent/35 hover:shadow-accent/50 animate-glow cursor-pointer'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-300 dark:text-gray-600 cursor-not-allowed'
-                  }`}
-                  title="Send Message"
-                >
-                  <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-                  </svg>
-                </button>
+                {/* Action button: Send message or stop recording, or start recording if input is empty */}
+                {isRecording ? (
+                  <button
+                    type="button"
+                    onClick={() => stopRecording(true)}
+                    className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500 text-white shadow-lg shadow-red-500/25 hover:bg-red-650 hover:shadow-red-500/35 transition-all active:scale-95 flex-shrink-0 cursor-pointer animate-pulse"
+                    title="Send Voice Note"
+                  >
+                    <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                    </svg>
+                  </button>
+                ) : inputText.trim() ? (
+                  <button
+                    type="submit"
+                    className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-all active:scale-95 flex-shrink-0 bg-gradient-to-br from-accent to-indigo-600 shadow-lg shadow-accent/35 hover:shadow-accent/50 animate-glow cursor-pointer"
+                    title="Send Message"
+                  >
+                    <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startRecording}
+                    className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-accent hover:text-white hover:shadow-lg hover:shadow-accent/35 transition-all active:scale-95 flex-shrink-0 cursor-pointer"
+                    title="Record Voice Note"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 0 3-3v-6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
+                    </svg>
+                  </button>
+                )}
               </form>
             </div>
           </>
