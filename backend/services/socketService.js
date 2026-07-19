@@ -438,6 +438,48 @@ export function init(server) {
       }
     })
 
+    // --- Phase 7: WebRTC Signaling Handlers ---
+    socket.on('call_user', ({ to, offer, type }) => {
+      socket.to(to).emit('incoming_call', {
+        from: userId,
+        fromName: socket.username,
+        offer,
+        type
+      })
+    })
+
+    socket.on('accept_call', ({ to, answer }) => {
+      socket.to(to).emit('call_accepted', {
+        from: userId,
+        answer
+      })
+    })
+
+    socket.on('reject_call', ({ to }) => {
+      socket.to(to).emit('call_rejected', {
+        from: userId
+      })
+    })
+
+    socket.on('ice_candidate', ({ to, candidate }) => {
+      socket.to(to).emit('ice_candidate', {
+        from: userId,
+        candidate
+      })
+    })
+
+    socket.on('end_call', ({ to }) => {
+      socket.to(to).emit('end_call', {
+        from: userId
+      })
+    })
+
+    socket.on('call_busy', ({ to }) => {
+      socket.to(to).emit('call_busy', {
+        from: userId
+      })
+    })
+
     // Handle disconnection
     socket.on('disconnect', async () => {
       const userSockets = activeConnections.get(userId)

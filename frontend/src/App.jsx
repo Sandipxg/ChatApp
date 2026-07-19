@@ -5,6 +5,8 @@ import ThemeContext from "./context/ThemeContext"
 import { AuthProvider, useAuth } from "./context/AuthContext"
 import { SocketProvider } from "./context/SocketContext"
 import { InstallProvider, useInstall } from './context/InstallContext'
+import { CallProvider } from "./context/CallContext"
+import CallModal from "./components/CallModal"
 
 import ProtectedRoute from "./components/ProtectedRoute"
 import ErrorBoundary from "./components/ErrorBoundary"
@@ -305,6 +307,7 @@ function AppLayout() {
           </ErrorBoundary>
         </main>
 
+        <CallModal />
       </div>
 
     </div>
@@ -315,13 +318,15 @@ function App() {
   return (
     <AuthProvider>
       <SocketProvider>
-        <ThemeProvider>
-          <InstallProvider>
-            <BrowserRouter>
-              <AppLayout />
-            </BrowserRouter>
-          </InstallProvider>
-        </ThemeProvider>
+        <CallProvider>
+          <ThemeProvider>
+            <InstallProvider>
+              <BrowserRouter>
+                <AppLayout />
+              </BrowserRouter>
+            </InstallProvider>
+          </ThemeProvider>
+        </CallProvider>
       </SocketProvider>
     </AuthProvider>
   )

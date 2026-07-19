@@ -181,7 +181,37 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ---
 
-# 📱 Phase 7: Offline First
+# 📞 Phase 7: Voice & Video Calls
+
+## Learn
+
+### WebRTC
+
+- [x] Peer connections
+- [x] SDP
+- [x] ICE Candidates
+- [x] STUN
+- [x] TURN
+- [x] NAT Traversal
+
+### Signaling
+
+- [x] Socket.IO signaling
+- [x] Call lifecycle
+
+## Build
+
+- [x] Voice calls
+- [x] Video calls
+- [x] Incoming call UI
+- [x] Active call UI
+- [x] Camera toggle
+- [x] Mic toggle
+- [x] Screen sharing
+
+---
+
+# 📱 Phase 8: Offline First
 
 ## Learn
 
@@ -204,7 +234,7 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ---
 
-# 🌐 Phase 8: Progressive Web App
+# 🌐 Phase 9: Progressive Web App
 
 ## Learn
 
@@ -221,36 +251,6 @@ This document tracks both the concepts to learn and the implementation progress 
 - [ ] Static asset caching
 - [ ] Push notifications
 - [ ] Background sync
-
----
-
-# 📞 Phase 9: Voice & Video Calls
-
-## Learn
-
-### WebRTC
-
-- [ ] Peer connections
-- [ ] SDP
-- [ ] ICE Candidates
-- [ ] STUN
-- [ ] TURN
-- [ ] NAT Traversal
-
-### Signaling
-
-- [ ] Socket.IO signaling
-- [ ] Call lifecycle
-
-## Build
-
-- [ ] Voice calls
-- [ ] Video calls
-- [ ] Incoming call UI
-- [ ] Active call UI
-- [ ] Camera toggle
-- [ ] Mic toggle
-- [ ] Screen sharing
 
 ---
 
