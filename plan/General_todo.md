@@ -274,16 +274,16 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] Presence synchronization
-- [ ] Heartbeat optimization
-- [ ] Presence caching
+- [x] Presence synchronization
+- [x] Heartbeat optimization
+- [x] Presence caching
 
 ## Build
 
-- [ ] Typing...
-- [ ] Recording...
-- [ ] Uploading...
-- [ ] Better heartbeat handling
+- [x] Typing...
+- [x] Recording...
+- [x] Uploading...
+- [x] Better heartbeat handling
 
 ---
 

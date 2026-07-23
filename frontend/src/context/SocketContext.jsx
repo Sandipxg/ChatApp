@@ -9,6 +9,7 @@ export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null)
   const [onlineUsers, setOnlineUsers] = useState([])
   const [typingStatus, setTypingStatus] = useState({})
+  const [userActivities, setUserActivities] = useState({}) // { [chatId]: { [userId]: { username, activity, timestamp } } }
   const [isSocketConnected, setIsSocketConnected] = useState(false)
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export function SocketProvider({ children }) {
       }
       setOnlineUsers([])
       setTypingStatus({})
+      setUserActivities({})
       setIsSocketConnected(false)
       return
     }
@@ -54,6 +56,15 @@ export function SocketProvider({ children }) {
         delete next[userId]
         return next
       })
+      setUserActivities((prev) => {
+        const next = { ...prev }
+        Object.keys(next).forEach((chatId) => {
+          if (next[chatId]?.[userId]) {
+            delete next[chatId][userId]
+          }
+        })
+        return next
+      })
     })
 
     newSocket.on('typing', ({ senderId, chatId }) => {
@@ -66,6 +77,28 @@ export function SocketProvider({ children }) {
       setTypingStatus((prev) => ({ ...prev, [key]: false }))
     })
 
+    // Phase 12: User Activity listener (typing, recording_audio, uploading_file)
+    newSocket.on('user_activity_updated', ({ userId, username, chatId, activity, isActionActive }) => {
+      setUserActivities((prev) => {
+        const chatActivities = { ...(prev[chatId] || {}) }
+
+        if (isActionActive) {
+          chatActivities[userId] = {
+            username: username || 'User',
+            activity,
+            timestamp: Date.now(),
+          }
+        } else {
+          delete chatActivities[userId]
+        }
+
+        return {
+          ...prev,
+          [chatId]: chatActivities,
+        }
+      })
+    })
+
     newSocket.on('disconnect', () => {
       setIsSocketConnected(false)
     })
@@ -75,9 +108,42 @@ export function SocketProvider({ children }) {
       setSocket(null)
       setOnlineUsers([])
       setTypingStatus({})
+      setUserActivities({})
       setIsSocketConnected(false)
     }
   }, [currentUser])
+
+  // Defensive auto-purge interval for stale transient activity indicators (> 4.5s old)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now()
+      setUserActivities((prev) => {
+        let changed = false
+        const nextState = { ...prev }
+
+        Object.keys(nextState).forEach((chatId) => {
+          const activities = nextState[chatId]
+          if (!activities) return
+
+          const updatedActivities = { ...activities }
+          Object.keys(updatedActivities).forEach((userId) => {
+            if (now - updatedActivities[userId].timestamp > 4500) {
+              delete updatedActivities[userId]
+              changed = true
+            }
+          })
+
+          if (changed) {
+            nextState[chatId] = updatedActivities
+          }
+        })
+
+        return changed ? nextState : prev
+      })
+    }, 2000)
+
+    return () => clearInterval(interval)
+  }, [])
 
   // Helper method to emit and await message send status
   const sendMessageViaSocket = (receiverId, text, parentMessageId = null) => {
@@ -105,6 +171,17 @@ export function SocketProvider({ children }) {
     }
   }
 
+  // Phase 12 Helper: Broadcast transient activity status (typing, recording_audio, uploading_file)
+  const sendActivityStatus = (targetId, activity, isActionActive) => {
+    if (!socket || !targetId) return
+    socket.emit('user_activity', {
+      chatId: targetId,
+      receiverId: targetId,
+      activity,
+      isActionActive: !!isActionActive,
+    })
+  }
+
   // Helper method to mark messages as read
   const markChatAsRead = (chatId) => {
     if (!socket) return
@@ -123,9 +200,11 @@ export function SocketProvider({ children }) {
         socket,
         onlineUsers,
         typingStatus,
+        userActivities,
         isSocketConnected,
         sendMessageViaSocket,
         sendTypingStatus,
+        sendActivityStatus,
         markChatAsRead,
         sendReaction,
       }}

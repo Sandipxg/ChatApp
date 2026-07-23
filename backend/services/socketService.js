@@ -19,6 +19,8 @@ export function init(server) {
   ].filter(Boolean)
 
   io = new Server(server, {
+    pingInterval: 10000,
+    pingTimeout: 5000,
     cors: {
       origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(origin)) {
@@ -187,6 +189,44 @@ export function init(server) {
         socket.to(receiverId).emit('stop_typing', { senderId: userId, chatId: receiverId })
       } else {
         io.to(receiverId).emit('stop_typing', { senderId: userId })
+      }
+    })
+
+    // Phase 12: Unified user activity indicators (typing, recording_audio, uploading_file)
+    socket.on('user_activity', async ({ chatId, receiverId, activity, isActionActive }) => {
+      try {
+        const targetChatId = chatId || receiverId
+        if (!targetChatId || !activity) return
+
+        const payload = {
+          userId,
+          username: socket.username,
+          chatId: targetChatId,
+          activity, // 'typing' | 'recording_audio' | 'uploading_file'
+          isActionActive: !!isActionActive
+        }
+
+        const isGroup = mongoose.Types.ObjectId.isValid(targetChatId)
+          ? await Conversation.exists({ _id: targetChatId, isGroup: true })
+          : false
+
+        if (isGroup) {
+          socket.to(targetChatId).emit('user_activity_updated', payload)
+        } else {
+          io.to(targetChatId).emit('user_activity_updated', payload)
+        }
+
+        // Backward compatibility
+        if (activity === 'typing') {
+          const legacyEvent = isActionActive ? 'typing' : 'stop_typing'
+          if (isGroup) {
+            socket.to(targetChatId).emit(legacyEvent, { senderId: userId, chatId: targetChatId })
+          } else {
+            io.to(targetChatId).emit(legacyEvent, { senderId: userId })
+          }
+        }
+      } catch (err) {
+        console.error('Error handling user_activity socket event:', err)
       }
     })
 
