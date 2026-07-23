@@ -18,7 +18,7 @@ async function startServer() {
 
 startServer().catch((error) => {
     console.error('Failed to start Journal API')
-    console.error(error.message)
+    console.error(error)
 
     if (error.code === 'ECONNREFUSED' && error.syscall === 'querySrv') {
         console.error('MongoDB Atlas SRV DNS lookup was refused.')

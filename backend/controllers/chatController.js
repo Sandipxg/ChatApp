@@ -5,6 +5,7 @@ import { Conversation } from '../models/conversationModel.js'
 import AppError from '../utils/AppError.js'
 import { isUserOnline, getIo } from '../services/socketService.js'
 import { v2 as cloudinary } from 'cloudinary'
+import { notifyOfflineUsers } from '../services/pushNotificationService.js'
 
 /**
  * Fetches all registered users in the database (excluding the logged-in user).
@@ -158,43 +159,71 @@ export async function sendMsg(req, res, next) {
       throw new AppError('Receiver ID and text content are required', 400)
     }
 
-    // Verify recipient user exists
-    const receiverExists = await User.exists({ _id: receiverId })
-    if (!receiverExists) {
-      throw new AppError('Recipient user not found', 404)
-    }
+    let conversation = await Conversation.findById(receiverId)
+    let isGroup = false
 
-    // Find or create the conversation
-    let conversation = await Conversation.findOne({
-      isGroup: false,
-      'members.userId': { $all: [senderId, receiverId] },
-      members: { $size: 2 }
-    })
+    if (conversation && conversation.isGroup) {
+      isGroup = true
+    } else {
+      const receiverExists = await User.exists({ _id: receiverId })
+      if (!receiverExists) {
+        throw new AppError('Recipient user or group not found', 404)
+      }
 
-    if (!conversation) {
-      conversation = await Conversation.create({
+      conversation = await Conversation.findOne({
         isGroup: false,
-        members: [
-          { userId: senderId, role: 'member' },
-          { userId: receiverId, role: 'member' }
-        ]
+        'members.userId': { $all: [senderId, receiverId] },
+        members: { $size: 2 }
       })
+
+      if (!conversation) {
+        conversation = await Conversation.create({
+          isGroup: false,
+          members: [
+            { userId: senderId, role: 'member' },
+            { userId: receiverId, role: 'member' }
+          ]
+        })
+      }
     }
 
     const chatId = conversation._id.toString()
     const message = await Message.create({
       chatId,
       senderId,
-      receiverId,
+      receiverId: isGroup ? null : receiverId,
       text,
-      status: isUserOnline(receiverId) ? 'delivered' : 'sent',
+      status: isGroup ? 'sent' : (isUserOnline(receiverId) ? 'delivered' : 'sent')
     })
 
-    // Update lastMessage on conversation
     conversation.lastMessage = message._id
     await conversation.save()
 
-    res.status(201).json(message)
+    const populatedMessage = await Message.findById(message._id)
+      .populate({
+        path: 'parentMessageId',
+        select: 'text messageType senderId isDeleted fileAttachment',
+        populate: {
+          path: 'senderId',
+          select: 'name username'
+        }
+      })
+
+    const io = getIo()
+    if (io) {
+      if (isGroup) {
+        const sender = await User.findById(senderId).select('name')
+        io.to(chatId).emit('new_message', {
+          ...populatedMessage.toObject(),
+          senderName: sender ? sender.name : 'User'
+        })
+      } else {
+        io.to(senderId).to(receiverId).emit('new_message', populatedMessage)
+      }
+    }
+    notifyOfflineUsers(populatedMessage).catch(console.error)
+
+    res.status(201).json(populatedMessage)
   } catch (error) {
     next(error)
   }
@@ -496,6 +525,7 @@ export async function createMediaMessage(req, res, next) {
         io.to(senderId).to(receiverId).emit('new_message', populatedMessage)
       }
     }
+    notifyOfflineUsers(populatedMessage).catch(console.error)
 
     res.status(201).json(populatedMessage)
   } catch (error) {

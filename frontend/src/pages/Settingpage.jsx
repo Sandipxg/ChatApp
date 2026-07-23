@@ -9,6 +9,7 @@ import {
   getSubscriptionState,
   triggerTestPush
 } from "../services/pushService"
+import { useInstall } from "../context/InstallContext"
 
 // Custom SVG Icons
 
@@ -113,6 +114,7 @@ function SettingsPage() {
   } = useContext(ThemeContext)
   
   const { currentUser, logout, deleteAccount, updateReminderSettings, updateUserImage } = useAuth()
+  const { isInstallable, isInstalled, install } = useInstall()
   const navigate = useNavigate()
   const location = useLocation()
   
@@ -684,6 +686,34 @@ function SettingsPage() {
                 {pushError && <p className="text-red-500 text-xs font-semibold">{pushError}</p>}
                 {pushSuccess && <p className="text-green-500 text-xs font-semibold">{pushSuccess}</p>}
               </div>
+
+              {(isInstallable || isInstalled) && (
+                <h2 className="text-xs font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none mt-8">App Installation</h2>
+              )}
+
+              {isInstallable && (
+                <div className="bg-bg-card border border-border-app rounded-3xl p-6 text-left space-y-4 shadow-sm">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-text-title">Install ChatApp</p>
+                    <p className="text-xs text-text-body opacity-60">Install ChatApp on your device for quick access and offline usability.</p>
+                  </div>
+                  <button
+                    onClick={install}
+                    className="bg-accent hover:bg-accent/90 text-white font-extrabold px-6 py-3 rounded-full text-xs tracking-wide transition-all shadow-lg shadow-accent/20 hover:shadow-accent/30 cursor-pointer"
+                  >
+                    Install App
+                  </button>
+                </div>
+              )}
+
+              {isInstalled && (
+                <div className="bg-bg-card border border-border-app rounded-3xl p-6 text-left space-y-4 shadow-sm">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-text-title">ChatApp is Installed</p>
+                    <p className="text-xs text-text-body opacity-60 font-semibold text-emerald-500">You are using the official standalone version of ChatApp.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Reminders section inside notifications */}
               <h2 className="text-xs font-extrabold text-text-body opacity-60 uppercase tracking-widest text-left select-none mt-8">Daily Reminders</h2>

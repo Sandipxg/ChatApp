@@ -1,106 +1,59 @@
-const DB_NAME = 'journal-offline-db'
-const DB_VERSION = 1
-const STORE_NAME = 'offline-actions'
+import Dexie from 'dexie'
 
-/**
- * Opens the IndexedDB database and sets up the object store if needed.
- * @returns {Promise<IDBDatabase>}
- */
-export const openDB = () => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION)
+const db = new Dexie('chatapp-offline-db')
 
-    request.onerror = () => reject(request.error)
-    request.onsuccess = () => resolve(request.result)
+db.version(1).stores({
+  'offline-actions': '++id',
+  contacts: 'id',
+  partners: 'chatId',
+  messages: 'chatId'
+})
 
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true })
-      }
-    }
-  })
-}
-
-/**
- * Adds a new action to the offline queue.
- * @param {Object} action
- * @returns {Promise<number>} ID of the created action
- */
 export const addOfflineAction = async (action) => {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.add(action)
-
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
+  return await db['offline-actions'].add(action)
 }
 
-/**
- * Retrieves all queued offline actions in chronological order.
- * @returns {Promise<Array>} List of actions
- */
 export const getOfflineActions = async () => {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.getAll()
-
-    request.onsuccess = () => resolve(request.result)
-    request.onerror = () => reject(request.error)
-  })
+  return await db['offline-actions'].toArray()
 }
 
-/**
- * Deletes an offline action by its auto-incremented key ID.
- * @param {number} id
- * @returns {Promise<void>}
- */
 export const deleteOfflineAction = async (id) => {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.delete(id)
-
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
+  return await db['offline-actions'].delete(id)
 }
 
-/**
- * Updates an offline action in the database.
- * @param {Object} action
- * @returns {Promise<void>}
- */
-export const updateOfflineAction = async (action) => {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.put(action)
-
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
-}
-
-/**
- * Clears all queued offline actions.
- * @returns {Promise<void>}
- */
 export const clearOfflineActions = async () => {
-  const db = await openDB()
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite')
-    const store = transaction.objectStore(STORE_NAME)
-    const request = store.clear()
+  return await db['offline-actions'].clear()
+}
 
-    request.onsuccess = () => resolve()
-    request.onerror = () => reject(request.error)
-  })
+export const getCachedContacts = async () => {
+  return await db.contacts.toArray()
+}
+
+export const saveCachedContacts = async (contacts) => {
+  await db.contacts.clear()
+  return await db.contacts.bulkPut(contacts)
+}
+
+export const getCachedPartners = async () => {
+  return await db.partners.toArray()
+}
+
+export const saveCachedPartners = async (partners) => {
+  await db.partners.clear()
+  const formatted = partners.map((p) => ({
+    ...p,
+    chatId: p.chatId || p.id
+  }))
+  return await db.partners.bulkPut(formatted)
+}
+
+export const getCachedMessages = async (chatId) => {
+  if (!chatId) return []
+  const entry = await db.messages.get(chatId)
+  return entry ? entry.messages : []
+}
+
+export const saveCachedMessages = async (chatId, messages) => {
+  if (!chatId) return
+  return await db.messages.put({ chatId, messages })
 }

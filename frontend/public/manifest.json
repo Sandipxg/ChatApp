@@ -1,7 +1,7 @@
 {
-  "name": "My Journal App",
-  "short_name": "Journal",
-  "description": "A personal journal to capture your daily thoughts.",
+  "name": "ChatApp",
+  "short_name": "ChatApp",
+  "description": "Real-time collaborative chat application with offline support.",
   "theme_color": "#7c3aed",
   "background_color": "#111827",
   "display": "standalone",
@@ -24,14 +24,14 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "My Journal App on Desktop"
+      "label": "ChatApp on Desktop"
     },
     {
       "src": "/screenshots/screenshot-mobile.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "My Journal App on Mobile"
+      "label": "ChatApp on Mobile"
     }
   ]
 }

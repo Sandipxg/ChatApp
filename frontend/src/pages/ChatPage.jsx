@@ -6,6 +6,17 @@ import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, r
 import { useSocket } from '../context/SocketContext'
 import { useCall } from '../context/CallContext'
 import AudioPlayer from '../components/AudioPlayer'
+import {
+  getCachedContacts,
+  saveCachedContacts,
+  getCachedPartners,
+  saveCachedPartners,
+  getCachedMessages,
+  saveCachedMessages,
+  addOfflineAction,
+  getOfflineActions,
+  deleteOfflineAction
+} from '../utils/db'
 
 // Play popup message dispatch sound using Web Audio API synthesis (pure offline solution)
 function playPopSound() {
@@ -130,7 +141,7 @@ const getGroupedReactions = (reactions = [], currentUserId) => {
 export default function ChatPage() {
   const { currentUser } = useAuth()
   const { chatWallpaper, enterToSend, playSounds } = useContext(ThemeContext)
-  const { socket, onlineUsers, typingStatus, sendMessageViaSocket, sendTypingStatus, markChatAsRead, sendReaction } = useSocket()
+  const { socket, onlineUsers, typingStatus, isSocketConnected, sendMessageViaSocket, sendTypingStatus, markChatAsRead, sendReaction } = useSocket()
   const { initiateCall } = useCall()
   const location = useLocation()
   const navigate = useNavigate()
@@ -531,17 +542,34 @@ export default function ChatPage() {
     async function loadInitialData() {
       try {
         setError(null)
+        const [cachedContacts, cachedPartners] = await Promise.all([
+          getCachedContacts(),
+          getCachedPartners()
+        ])
+
+        if (cachedContacts.length > 0) setContacts(cachedContacts)
+        if (cachedPartners.length > 0) setPartners(cachedPartners)
+
+        if (cachedContacts.length > 0 || cachedPartners.length > 0) {
+          setLoading(false)
+        }
+
         const [contactsList, partnersList] = await Promise.all([
           fetchContacts(),
           fetchPartners()
         ])
-        
-        // Merge real data with mockup data to wow the user
+
         setContacts(contactsList)
         setPartners(partnersList)
+
+        saveCachedContacts(contactsList).catch(console.error)
+        saveCachedPartners(partnersList).catch(console.error)
       } catch (err) {
         console.error('Failed to load chat data:', err)
-        setError(err.message || 'Error connecting to database')
+        const cachedContacts = await getCachedContacts()
+        if (cachedContacts.length === 0) {
+          setError(err.message || 'Error connecting to database')
+        }
       } finally {
         setLoading(false)
       }
@@ -861,6 +889,44 @@ export default function ChatPage() {
     }
   }, [socket, selectedPartner, currentUser.id, playSounds, markChatAsRead])
 
+  // Listen for background sync completion to update the UI
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+
+    const handleServiceWorkerMessage = (event) => {
+      if (event.data && event.data.type === 'SYNC_COMPLETE') {
+        console.log('[ChatPage] Service Worker background sync completed:', event.data.idMap)
+        
+        fetchPartners().then((updatedPartners) => {
+          setPartners(updatedPartners)
+          saveCachedPartners(updatedPartners).catch(console.error)
+        }).catch(console.error)
+
+        if (selectedPartner) {
+          const chatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+          fetchMessages(chatId).then((history) => {
+            setMessages(history)
+            saveCachedMessages(chatId, history).catch(console.error)
+          }).catch(console.error)
+        }
+      }
+    }
+
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage)
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage)
+    }
+  }, [selectedPartner, currentUser.id])
+
+  // Trigger sync on socket reconnection
+  useEffect(() => {
+    if (isSocketConnected) {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'TRIGGER_SYNC' })
+      }
+    }
+  }, [isSocketConnected])
+
   // Select a partner
   const handleSelectPartner = async (partner) => {
     setSelectedPartner(partner)
@@ -869,16 +935,29 @@ export default function ChatPage() {
     setEditingMessage(null)
     setCurrentPinIndex(0)
 
+    const chatId = partner.chatId || [currentUser.id, partner.id].sort().join('_')
+
     try {
-      const chatId = partner.chatId || [currentUser.id, partner.id].sort().join('_')
+      const cachedMsgs = await getCachedMessages(chatId)
+      if (cachedMsgs.length > 0) {
+        setMessages(cachedMsgs)
+        setTimeout(scrollToBottom, 80)
+      }
+    } catch (err) {
+      console.error('Error loading messages from cache:', err)
+    }
+
+    try {
       const messageHistory = await fetchMessages(chatId)
       setMessages(messageHistory)
-      
+      saveCachedMessages(chatId, messageHistory).catch(console.error)
+
       markChatAsRead(chatId)
-      
+
       const updatedPartners = await fetchPartners()
       setPartners(updatedPartners)
-      
+      saveCachedPartners(updatedPartners).catch(console.error)
+
       setTimeout(scrollToBottom, 80)
     } catch (err) {
       console.error('Error loading message history:', err)
@@ -900,9 +979,12 @@ export default function ChatPage() {
       setEditingMessage(null)
       try {
         const updatedMsg = await editMessage(msgId, textToSend)
-        setMessages((prev) =>
-          prev.map((m) => ((m._id || m.id) === msgId ? updatedMsg : m))
-        )
+        setMessages((prev) => {
+          const updated = prev.map((m) => ((m._id || m.id) === msgId ? updatedMsg : m))
+          const chatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+          saveCachedMessages(chatId, updated).catch(console.error)
+          return updated
+        })
       } catch (err) {
         console.error('Error editing message:', err)
         setError(err.message || 'Failed to edit message.')
@@ -917,18 +999,114 @@ export default function ChatPage() {
       clearTimeout(typingTimeoutRef.current)
     }
 
-    try {
-      const parentId = replyingToMessage?._id || replyingToMessage?.id || null
-      setReplyingToMessage(null)
-      await sendMessageViaSocket(selectedPartner.id, textToSend, parentId)
+    const parentId = replyingToMessage?._id || replyingToMessage?.id || null
+    setReplyingToMessage(null)
+
+    if (!isSocketConnected) {
+      const tempId = `temp-${Date.now()}`
+      const chatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+
+      const tempMsg = {
+        _id: tempId,
+        id: tempId,
+        chatId,
+        senderId: currentUser.id,
+        receiverId: selectedPartner.isGroup ? null : selectedPartner.id,
+        text: textToSend,
+        messageType: 'text',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        parentMessageId: parentId ? { _id: parentId } : null
+      }
+
+      setMessages((prev) => {
+        const updated = [...prev, tempMsg]
+        saveCachedMessages(chatId, updated).catch(console.error)
+        return updated
+      })
+
+      setPartners((prev) => {
+        const updated = prev.map((p) => {
+          const matchId = p.chatId || p.id
+          if (matchId === chatId) {
+            return { ...p, latestMessage: tempMsg }
+          }
+          return p
+        })
+        saveCachedPartners(updated).catch(console.error)
+        return updated
+      })
+
       setTimeout(scrollToBottom, 50)
-    } catch (err) {
-      console.error('Error sending message via socket:', err)
-      setError('Failed to send message.')
+
+      try {
+        await addOfflineAction({
+          type: 'SEND_MESSAGE',
+          payload: {
+            tempId,
+            receiverId: selectedPartner.id,
+            text: textToSend,
+            parentMessageId: parentId
+          }
+        })
+
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+          const reg = await navigator.serviceWorker.ready
+          await reg.sync.register('sync-chat-messages')
+        } else if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({ type: 'TRIGGER_SYNC' })
+        }
+      } catch (err) {
+        console.error('Error queuing offline message:', err)
+      }
+    } else {
+      try {
+        await sendMessageViaSocket(selectedPartner.id, textToSend, parentId)
+        setTimeout(scrollToBottom, 50)
+      } catch (err) {
+        console.error('Error sending message via socket:', err)
+        setError('Failed to send message.')
+      }
     }
   }
 
   const handleDeleteEveryone = async (messageId) => {
+    if (messageId.toString().startsWith('temp-')) {
+      setMessages((prev) => prev.filter((m) => (m._id || m.id) !== messageId))
+
+      const chatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+      getCachedMessages(chatId).then((cachedMsgs) => {
+        const updated = cachedMsgs.filter((m) => (m._id || m.id) !== messageId)
+        saveCachedMessages(chatId, updated).catch(console.error)
+      }).catch(console.error)
+
+      getOfflineActions().then((actions) => {
+        const match = actions.find((a) => a.type === 'SEND_MESSAGE' && a.payload.tempId === messageId)
+        if (match) {
+          deleteOfflineAction(match.id).catch(console.error)
+        }
+      }).catch(console.error)
+
+      setPartners((prev) =>
+        prev.map((p) => {
+          const matchChatId = p.chatId || p.id
+          if (matchChatId === chatId) {
+            if (p.latestMessage && (p.latestMessage.id === messageId || p.latestMessage._id === messageId)) {
+              return {
+                ...p,
+                latestMessage: {
+                  ...p.latestMessage,
+                  text: 'Message deleted'
+                }
+              }
+            }
+          }
+          return p
+        })
+      )
+      return
+    }
+
     try {
       const updated = await deleteMessageForEveryone(messageId)
       setMessages((prev) =>
@@ -968,6 +1146,39 @@ export default function ChatPage() {
   }
 
   const handleDeleteMe = async (messageId) => {
+    if (messageId.toString().startsWith('temp-')) {
+      setMessages((prev) => prev.filter((m) => (m._id || m.id) !== messageId))
+
+      const chatId = selectedPartner.chatId || [currentUser.id, selectedPartner.id].sort().join('_')
+      getCachedMessages(chatId).then((cachedMsgs) => {
+        const updated = cachedMsgs.filter((m) => (m._id || m.id) !== messageId)
+        saveCachedMessages(chatId, updated).catch(console.error)
+      }).catch(console.error)
+
+      getOfflineActions().then((actions) => {
+        const match = actions.find((a) => a.type === 'SEND_MESSAGE' && a.payload.tempId === messageId)
+        if (match) {
+          deleteOfflineAction(match.id).catch(console.error)
+        }
+      }).catch(console.error)
+
+      setPartners((prev) =>
+        prev.map((p) => {
+          if (p.latestMessage && (p.latestMessage.id === messageId || p.latestMessage._id === messageId)) {
+            return {
+              ...p,
+              latestMessage: {
+                ...p.latestMessage,
+                text: 'Message deleted'
+              }
+            }
+          }
+          return p
+        })
+      )
+      return
+    }
+
     try {
       await deleteMessageForMe(messageId)
       setMessages((prev) => prev.filter((m) => (m._id || m.id) !== messageId))
@@ -2080,7 +2291,11 @@ export default function ChatPage() {
                           <span>{formatTime(msg.createdAt)}</span>
                           {isOwnMessage && (
                             <span className="flex items-center">
-                              {msg.status === 'sent' ? (
+                              {msg.status === 'pending' ? (
+                                <svg className="w-3.5 h-3.5 text-white/40 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" title="Pending sync">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                              ) : msg.status === 'sent' ? (
                                 <svg className="w-3.5 h-3.5 text-white/50" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                 </svg>

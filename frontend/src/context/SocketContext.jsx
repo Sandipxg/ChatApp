@@ -9,6 +9,7 @@ export function SocketProvider({ children }) {
   const [socket, setSocket] = useState(null)
   const [onlineUsers, setOnlineUsers] = useState([])
   const [typingStatus, setTypingStatus] = useState({})
+  const [isSocketConnected, setIsSocketConnected] = useState(false)
 
   useEffect(() => {
     if (!currentUser) {
@@ -18,6 +19,7 @@ export function SocketProvider({ children }) {
       }
       setOnlineUsers([])
       setTypingStatus({})
+      setIsSocketConnected(false)
       return
     }
 
@@ -31,7 +33,7 @@ export function SocketProvider({ children }) {
 
     // Setup listeners
     newSocket.on('connect', () => {
-      // console.log('Socket connected successfully:', newSocket.id)
+      setIsSocketConnected(true)
     })
 
     newSocket.on('online_users', (users) => {
@@ -65,7 +67,7 @@ export function SocketProvider({ children }) {
     })
 
     newSocket.on('disconnect', () => {
-      // console.log('Socket disconnected')
+      setIsSocketConnected(false)
     })
 
     return () => {
@@ -73,6 +75,7 @@ export function SocketProvider({ children }) {
       setSocket(null)
       setOnlineUsers([])
       setTypingStatus({})
+      setIsSocketConnected(false)
     }
   }, [currentUser])
 
@@ -120,6 +123,7 @@ export function SocketProvider({ children }) {
         socket,
         onlineUsers,
         typingStatus,
+        isSocketConnected,
         sendMessageViaSocket,
         sendTypingStatus,
         markChatAsRead,

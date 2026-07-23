@@ -215,22 +215,22 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] IndexedDB
-- [ ] Local-first architecture
-- [ ] Background Sync
-- [ ] Retry queues
-- [ ] Conflict resolution
-- [ ] Cache API
-- [ ] Optimistic UI
+- [x] IndexedDB
+- [x] Local-first architecture
+- [x] Background Sync
+- [x] Retry queues
+- [x] Conflict resolution
+- [x] Cache API
+- [x] Optimistic UI
 
 ## Build
 
-- [ ] Store messages locally
-- [ ] Queue unsent messages
-- [ ] Retry automatically
-- [ ] Sync when online
-- [ ] Offline conversation loading
-- [ ] Offline message sending
+- [x] Store messages locally
+- [x] Queue unsent messages
+- [x] Retry automatically
+- [x] Sync when online
+- [x] Offline conversation loading
+- [x] Offline message sending
 
 ---
 
@@ -238,23 +238,39 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] Service Workers
-- [ ] Manifest
-- [ ] Push API
-- [ ] Notification API
-- [ ] Install Prompt
+- [x] Service Workers
+- [x] Manifest
+- [x] Push API
+- [x] Notification API
+- [x] Install Prompt
 
 ## Build
 
-- [ ] Installable app
-- [ ] Offline startup
-- [ ] Static asset caching
-- [ ] Push notifications
-- [ ] Background sync
+- [x] Installable app
+- [x] Offline startup
+- [x] Static asset caching
+- [x] Push notifications
+- [x] Background sync
 
 ---
 
-# 🟢 Phase 10: Presence Extensions
+# 🔔 Phase 10: Push Notifications
+
+## Learn
+
+- [x] Push subscriptions
+- [x] VAPID Keys
+- [x] Notification payloads
+
+## Build
+
+- [x] Notify offline users
+- [x] Open conversation on click
+- [x] Notification settings
+
+---
+
+# 🟢 Phase 12: Presence Extensions
 
 ## Learn
 
@@ -268,40 +284,6 @@ This document tracks both the concepts to learn and the implementation progress 
 - [ ] Recording...
 - [ ] Uploading...
 - [ ] Better heartbeat handling
-
----
-
-# 🔍 Phase 11: Global Search
-
-## Learn
-
-- [ ] MongoDB text indexes
-- [ ] Search optimization
-- [ ] Filtering
-
-## Build
-
-- [ ] Search API
-- [ ] Filter by sender
-- [ ] Filter by date
-- [ ] Filter by file
-- [ ] Search UI
-
----
-
-# 🔔 Phase 12: Push Notifications
-
-## Learn
-
-- [ ] Push subscriptions
-- [ ] VAPID Keys
-- [ ] Notification payloads
-
-## Build
-
-- [ ] Notify offline users
-- [ ] Open conversation on click
-- [ ] Notification settings
 
 ---
 
@@ -347,25 +329,6 @@ This document tracks both the concepts to learn and the implementation progress 
 - [ ] Multiple backend instances
 - [ ] NGINX
 - [ ] Load testing (Artillery)
-
----
-
-# 🧪 Phase 15: Testing
-
-## Learn
-
-- [ ] Socket testing
-- [ ] API testing
-- [ ] Multi-client testing
-- [ ] Performance testing
-
-## Build
-
-- [ ] Test multiple users
-- [ ] Test reconnects
-- [ ] Test offline mode
-- [ ] Test duplicate messages
-- [ ] Test large group chats
 
 ---
 

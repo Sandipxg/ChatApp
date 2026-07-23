@@ -4,6 +4,7 @@ import { auth } from '../config/auth.js'
 import { User } from '../models/userModel.js'
 import { Message } from '../models/messageModel.js'
 import { Conversation } from '../models/conversationModel.js'
+import { notifyOfflineUsers } from './pushNotificationService.js'
 
 let io = null
 
@@ -158,9 +159,10 @@ export function init(server) {
             senderName: socket.username
           })
         } else {
-          // Broadcast new message to both participants
           io.to(userId).to(receiverId).emit('new_message', populatedMessage)
         }
+
+        notifyOfflineUsers(populatedMessage).catch(console.error)
 
         if (callback) callback({ success: true, message: populatedMessage })
       } catch (error) {
