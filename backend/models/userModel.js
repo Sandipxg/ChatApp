@@ -34,6 +34,10 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    publicKey: {
+      type: mongoose.Schema.Types.Mixed, // Stores exported ECDH public key JWK object
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -52,6 +56,7 @@ function toClientUser(user) {
     email: user.email,
     reminderTime: user.reminderTime,
     timezone: user.timezone,
+    publicKey: user.publicKey || null,
   }
 }
 

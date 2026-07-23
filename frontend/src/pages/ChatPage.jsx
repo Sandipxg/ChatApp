@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useContext } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeContext from '../context/ThemeContext'
-import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage, deleteMessageForEveryone, deleteMessageForMe } from '../services/chatService'
+import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage, deleteMessageForEveryone, deleteMessageForMe, uploadPublicKey, fetchUserPublicKey } from '../services/chatService'
+import { getOrGenerateUserECDHKeyPair, exportPublicKeyJWK, importPublicKeyJWK, deriveSharedAESKey, encryptMessageText, decryptMessageText } from '../utils/crypto'
 import { useSocket } from '../context/SocketContext'
 import { useCall } from '../context/CallContext'
 import AudioPlayer from '../components/AudioPlayer'
@@ -162,6 +163,130 @@ export default function ChatPage() {
   const [error, setError] = useState(null)
   const [currentPinIndex, setCurrentPinIndex] = useState(0)
   const [replyingToMessage, setReplyingToMessage] = useState(null)
+
+  // Phase 13 E2EE State variables
+  const [userECDHKeyPair, setUserECDHKeyPair] = useState(null)
+  const [sharedAESKey, setSharedAESKey] = useState(null)
+  const [isE2EEActive, setIsE2EEActive] = useState(false)
+
+  // Initialize or load user ECDH key pair from IndexedDB and publish public key
+  useEffect(() => {
+    async function initUserE2EEKey() {
+      if (!currentUser?.id) return
+      try {
+        const keyPair = await getOrGenerateUserECDHKeyPair(currentUser.id)
+        setUserECDHKeyPair(keyPair)
+
+        const jwk = await exportPublicKeyJWK(keyPair.publicKey)
+        uploadPublicKey(jwk).catch(console.error)
+      } catch (err) {
+        console.error('Error initializing E2EE user key:', err)
+      }
+    }
+    initUserE2EEKey()
+  }, [currentUser?.id])
+
+  // Derive shared AES key when 1-to-1 partner is selected
+  useEffect(() => {
+    async function deriveChatAESKey() {
+      setSharedAESKey(null)
+      setIsE2EEActive(false)
+
+      if (!selectedPartner || selectedPartner.isGroup || !userECDHKeyPair?.privateKey) {
+        return
+      }
+
+      try {
+        const partnerPublicKeyJwk = selectedPartner.publicKey || await fetchUserPublicKey(selectedPartner.id)
+        if (partnerPublicKeyJwk) {
+          const partnerCryptoKey = await importPublicKeyJWK(partnerPublicKeyJwk)
+          const derivedAESKey = await deriveSharedAESKey(userECDHKeyPair.privateKey, partnerCryptoKey)
+          setSharedAESKey(derivedAESKey)
+          setIsE2EEActive(true)
+        } else {
+          console.warn(`Partner ${selectedPartner.username} has no E2EE public key uploaded yet. Chat will default to standard TLS encryption until partner logs in.`)
+        }
+      } catch (err) {
+        console.error('Failed to derive shared E2EE key for chat:', err)
+      }
+    }
+    deriveChatAESKey()
+  }, [selectedPartner, userECDHKeyPair])
+
+  // Automatically decrypt incoming or loaded encrypted messages
+  useEffect(() => {
+    if (!sharedAESKey || messages.length === 0) return
+
+    let isSubscribed = true
+    async function decryptAllEncryptedMessages() {
+      let hasDecryptedAny = false
+      const updatedMessages = await Promise.all(
+        messages.map(async (msg) => {
+          if (msg.isEncrypted && msg.iv && msg.text && !msg.isDecryptedLocally) {
+            hasDecryptedAny = true
+            const plaintext = await decryptMessageText(msg.text, msg.iv, sharedAESKey)
+            return {
+              ...msg,
+              text: plaintext,
+              isDecryptedLocally: true,
+            }
+          }
+          return msg
+        })
+      )
+
+      if (isSubscribed && hasDecryptedAny) {
+        setMessages(updatedMessages)
+      }
+    }
+
+    decryptAllEncryptedMessages()
+    return () => {
+      isSubscribed = false
+    }
+  }, [messages, sharedAESKey])
+
+  // Automatically decrypt latestMessage text for sidebar contact cards
+  useEffect(() => {
+    if (!userECDHKeyPair?.privateKey || partners.length === 0) return
+
+    let isSubscribed = true
+    async function decryptSidebarLatestMessages() {
+      let changed = false
+      const updatedPartners = await Promise.all(
+        partners.map(async (partner) => {
+          const msg = partner.latestMessage
+          if (!msg || !msg.isEncrypted || !msg.iv || msg.decryptedText) return partner
+
+          const targetPublicKeyJwk = partner.publicKey || await fetchUserPublicKey(partner.id).catch(() => null)
+          if (!targetPublicKeyJwk) return partner
+
+          try {
+            const partnerCryptoKey = await importPublicKeyJWK(targetPublicKeyJwk)
+            const derivedAESKey = await deriveSharedAESKey(userECDHKeyPair.privateKey, partnerCryptoKey)
+            const plaintext = await decryptMessageText(msg.text, msg.iv, derivedAESKey)
+            changed = true
+            return {
+              ...partner,
+              latestMessage: {
+                ...msg,
+                decryptedText: plaintext
+              }
+            }
+          } catch (e) {
+            return partner
+          }
+        })
+      )
+
+      if (isSubscribed && changed) {
+        setPartners(updatedPartners)
+      }
+    }
+
+    decryptSidebarLatestMessages()
+    return () => { isSubscribed = false }
+  }, [partners, userECDHKeyPair])
 
   // File Sharing state variables & refs
   const [activeUploads, setActiveUploads] = useState({})
@@ -1068,7 +1193,12 @@ export default function ChatPage() {
       }
     } else {
       try {
-        await sendMessageViaSocket(selectedPartner.id, textToSend, parentId)
+        if (sharedAESKey && !selectedPartner.isGroup) {
+          const { ciphertext, iv } = await encryptMessageText(textToSend, sharedAESKey)
+          await sendMessageViaSocket(selectedPartner.id, ciphertext, parentId, true, iv)
+        } else {
+          await sendMessageViaSocket(selectedPartner.id, textToSend, parentId)
+        }
         setTimeout(scrollToBottom, 50)
       } catch (err) {
         console.error('Error sending message via socket:', err)
@@ -1488,7 +1618,6 @@ export default function ChatPage() {
       }
     }
   }
-}
 
 // Handle drag drop events on Feed Pane
 const handleDrop = (e) => {
@@ -1683,8 +1812,26 @@ return (
                         }`}>
                         {isTyping ? (
                           <span className="text-accent font-bold">typing...</span>
+                        ) : partner.latestMessage ? (
+                          partner.latestMessage.decryptedText ? (
+                            <span className="flex items-center gap-1 truncate">
+                              <svg className="w-3 h-3 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                              </svg>
+                              <span className="truncate">{partner.latestMessage.decryptedText}</span>
+                            </span>
+                          ) : (partner.latestMessage.isEncrypted || partner.latestMessage.iv) ? (
+                            <span className="italic opacity-85 flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                              </svg>
+                              <span>Encrypted message</span>
+                            </span>
+                          ) : (
+                            partner.latestMessage.text
+                          )
                         ) : (
-                          partner.latestMessage ? partner.latestMessage.text : 'Start a conversation'
+                          'Start a conversation'
                         )}
                       </p>
                       {partner.unreadCount > 0 && (
@@ -1789,6 +1936,14 @@ return (
                 <div className="text-left leading-tight flex-1 min-w-0">
                   <h3 className="text-base font-bold text-text-title truncate flex items-center gap-1.5">
                     <span>{selectedPartner.username}</span>
+                    {isE2EEActive && !selectedPartner.isGroup && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/40 select-none" title="End-to-End Encrypted (Web Crypto ECDH + AES-GCM-256)">
+                        <svg className="w-3 h-3 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                        </svg>
+                        <span>E2EE</span>
+                      </span>
+                    )}
                     {selectedPartner.isGroup && (
                       <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 11.517 1.282l-.517-.557zm0-5.625a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12 18.75a7.5 7.5 0 100-15 7.5 7.5 0 000 15z" />
@@ -3489,6 +3644,7 @@ return (
     })()}
 
   </div>
-)
+  )
+}
 
 

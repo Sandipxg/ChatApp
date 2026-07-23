@@ -51,4 +51,45 @@ router.post('/avatar', authMiddleware, upload.single('avatar'), async (req, res,
   }
 })
 
+// Phase 13 E2EE: Upload public key JWK for current user
+router.put('/public-key', authMiddleware, async (req, res, next) => {
+  try {
+    const { publicKey } = req.body
+    if (!publicKey) {
+      throw new AppError('PublicKey object is required', 400)
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.userId,
+      { publicKey },
+      { new: true }
+    )
+
+    res.json({
+      success: true,
+      publicKey: updatedUser.publicKey
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+// Phase 13 E2EE: Fetch public key JWK for a specific partner user
+router.get('/:userId/public-key', authMiddleware, async (req, res, next) => {
+  try {
+    const targetUser = await User.findById(req.params.userId).select('publicKey username name')
+    if (!targetUser) {
+      throw new AppError('User not found', 404)
+    }
+
+    res.json({
+      success: true,
+      userId: targetUser._id.toString(),
+      publicKey: targetUser.publicKey || null
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 export default router

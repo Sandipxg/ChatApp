@@ -95,7 +95,7 @@ export function init(server) {
     // Handle incoming message sent via WebSocket
     socket.on('send_message', async (payload, callback) => {
       try {
-        const { receiverId, text, parentMessageId } = payload
+        const { receiverId, text, parentMessageId, isEncrypted, iv } = payload
         if (!receiverId || !text) {
           if (callback) callback({ error: 'Receiver ID and text are required' })
           return
@@ -135,6 +135,8 @@ export function init(server) {
           senderId: userId,
           receiverId: isGroup ? null : receiverId,
           text,
+          isEncrypted: !!isEncrypted,
+          iv: iv || null,
           parentMessageId: parentMessageId || null,
           status: isGroup ? 'sent' : (isUserOnline(receiverId) ? 'delivered' : 'sent'),
         })

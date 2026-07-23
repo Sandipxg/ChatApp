@@ -138,6 +138,44 @@ function AppLayout() {
   }
 
   const activeTab = getActiveTab()
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false)
+
+  // Debounce socket offline banner to avoid 1s orange banner flash during browser tab switching
+  useEffect(() => {
+    let timer = null
+    if (!isSocketConnected || !navigator.onLine) {
+      if (!navigator.onLine) {
+        setShowOfflineBanner(true)
+      } else {
+        timer = setTimeout(() => {
+          setShowOfflineBanner(true)
+        }, 3000)
+      }
+    } else {
+      setShowOfflineBanner(false)
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer)
+    }
+  }, [isSocketConnected])
+
+  useEffect(() => {
+    const handleOnline = () => {
+      if (isSocketConnected) setShowOfflineBanner(false)
+    }
+    const handleOffline = () => {
+      setShowOfflineBanner(true)
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [isSocketConnected])
 
 
 
@@ -292,7 +330,7 @@ function AppLayout() {
 
         </header>
 
-        {!isSocketConnected && (
+        {showOfflineBanner && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 px-6 py-2 flex items-center justify-between z-20 text-xs font-semibold animate-fade-down backdrop-blur-sm transition-all duration-300 select-none text-left flex-shrink-0">
             <div className="flex items-center gap-2">
               <svg className="w-4 h-4 animate-pulse shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">

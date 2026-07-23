@@ -27,6 +27,14 @@ const messageSchema = new mongoose.Schema(
       enum: ['text', 'image', 'video', 'audio', 'file', 'system'],
       default: 'text',
     },
+    isEncrypted: {
+      type: Boolean,
+      default: false,
+    },
+    iv: {
+      type: String,
+      default: null,
+    },
     fileAttachment: {
       url: { type: String, default: null },
       name: { type: String, default: null },

@@ -8,7 +8,7 @@ class ErrorBoundary extends Component {
       error.name === 'ChunkLoadError' || 
       /chunk|loading/i.test(error.message) || 
       /Failed to fetch dynamically imported module/i.test(error.message)
-    return { hasError: true, isChunkError }
+    return { hasError: true, isChunkError, error }
   }
 
   componentDidCatch(error, errorInfo) {
@@ -45,6 +45,11 @@ class ErrorBoundary extends Component {
         <div className="text-center py-10">
           <p className="text-red-500 font-medium">Something went wrong.</p>
           <p className="text-gray-400 text-sm mt-1">Try refreshing the page.</p>
+          {this.state.error && (
+            <p className="text-xs text-red-500/80 font-mono mt-3 px-4 max-w-lg mx-auto bg-red-500/10 p-2 rounded-lg break-words select-text">
+              {this.state.error.message || String(this.state.error)}
+            </p>
+          )}
           <button
             onClick={this.handleRetry}
             className="mt-4 px-4 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 rounded-md text-xs font-medium cursor-pointer"

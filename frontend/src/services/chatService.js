@@ -257,6 +257,32 @@ export async function deleteMessageForMe(messageId) {
   return res.json()
 }
 
+const USER_API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/user`
+
+export async function uploadPublicKey(publicKeyJwk) {
+  const res = await fetch(`${USER_API_URL}/public-key`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ publicKey: publicKeyJwk }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to upload public key')
+  }
+  return res.json()
+}
+
+export async function fetchUserPublicKey(userId) {
+  const res = await fetch(`${USER_API_URL}/${userId}/public-key`, { credentials: 'include' })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to fetch partner public key')
+  }
+  const data = await res.json()
+  return data.publicKey
+}
+
 
 
 

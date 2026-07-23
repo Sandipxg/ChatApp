@@ -13,7 +13,7 @@ import { notifyOfflineUsers } from '../services/pushNotificationService.js'
 export async function getContacts(req, res, next) {
   try {
     const currentUserId = req.userId
-    const contacts = await User.find({ _id: { $ne: currentUserId } }).select('email name image username lastSeen')
+    const contacts = await User.find({ _id: { $ne: currentUserId } }).select('email name image username lastSeen publicKey')
     
     const clientContacts = contacts.map((user) => ({
       id: user._id.toString(),
@@ -23,6 +23,7 @@ export async function getContacts(req, res, next) {
       username: user.username || user.name || 'User',
       isOnline: isUserOnline(user._id.toString()),
       lastSeen: user.lastSeen,
+      publicKey: user.publicKey || null,
     }))
 
     res.json(clientContacts)
@@ -76,6 +77,8 @@ export async function getChatPartners(req, res, next) {
                   : (convo.lastMessage.deletedBy && convo.lastMessage.deletedBy.some(id => id.toString() === currentUserId)
                     ? 'Message deleted'
                     : convo.lastMessage.text),
+                isEncrypted: !!convo.lastMessage.isEncrypted,
+                iv: convo.lastMessage.iv || null,
                 senderId: convo.lastMessage.senderId.toString(),
                 receiverId: convo.lastMessage.receiverId ? convo.lastMessage.receiverId.toString() : null,
                 createdAt: convo.lastMessage.createdAt,
@@ -90,7 +93,7 @@ export async function getChatPartners(req, res, next) {
       if (!partnerMember) return null
 
       const partnerId = partnerMember.userId
-      const user = await User.findById(partnerId).select('email name image username lastSeen')
+      const user = await User.findById(partnerId).select('email name image username lastSeen publicKey')
       if (!user) return null
 
       const chatId = convo._id.toString()
@@ -111,6 +114,7 @@ export async function getChatPartners(req, res, next) {
         username: user.username || user.name || 'User',
         isOnline: isUserOnline(user._id.toString()),
         lastSeen: user.lastSeen,
+        publicKey: user.publicKey || null,
         unreadCount,
         latestMessage: convo.lastMessage
           ? {
@@ -121,6 +125,8 @@ export async function getChatPartners(req, res, next) {
                 : (convo.lastMessage.deletedBy && convo.lastMessage.deletedBy.some(id => id.toString() === currentUserId)
                   ? 'Message deleted'
                   : convo.lastMessage.text),
+              isEncrypted: !!convo.lastMessage.isEncrypted,
+              iv: convo.lastMessage.iv || null,
               senderId: convo.lastMessage.senderId.toString(),
               receiverId: convo.lastMessage.receiverId ? convo.lastMessage.receiverId.toString() : null,
               createdAt: convo.lastMessage.createdAt,

@@ -291,18 +291,18 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ## Learn
 
-- [ ] Web Crypto API
-- [ ] End-to-End Encryption basics
-- [ ] Diffie-Hellman
-- [ ] Signal Protocol overview
-- [ ] Socket validation
-- [ ] XSS prevention
-- [ ] Rate limiting
+- [x] Web Crypto API
+- [x] End-to-End Encryption basics
+- [x] Diffie-Hellman
+- [x] Signal Protocol overview
+- [x] Socket validation
+- [x] XSS prevention
+- [x] Rate limiting
 
 ## Build
 
-- [ ] Encrypt messages (prototype)
-- [ ] Key exchange
+- [x] Encrypt messages (ECDH + AES-GCM-256)
+- [x] Key exchange
 - [ ] Secure socket events
 - [ ] Input sanitization
 - [ ] Better rate limiting
