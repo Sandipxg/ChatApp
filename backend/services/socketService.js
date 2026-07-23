@@ -80,24 +80,56 @@ export function init(server) {
       deliverOfflineMessages(userId)
     }
 
+// In-memory sliding window rate limiter per socket connection
+const socketRateLimitMap = new Map()
+
+function isSocketRateLimited(socketId, maxCount = 15, windowMs = 2000) {
+  const now = Date.now()
+  let entry = socketRateLimitMap.get(socketId)
+  if (!entry || now > entry.resetTime) {
+    entry = { count: 1, resetTime: now + windowMs }
+    socketRateLimitMap.set(socketId, entry)
+    return false
+  }
+  entry.count++
+  return entry.count > maxCount
+}
+
     // Send the current list of online user IDs to the connected client
     socket.emit('online_users', Array.from(activeConnections.keys()))
 
-    // Support dynamic room joining on UI creation/update
-    socket.on('join_group_rooms', (chatIds = []) => {
-      chatIds.forEach((chatId) => {
+    // Secure dynamic room joining with group membership authorization check
+    socket.on('join_group_rooms', async (chatIds = []) => {
+      if (!Array.isArray(chatIds)) return
+      for (const chatId of chatIds) {
         if (mongoose.Types.ObjectId.isValid(chatId)) {
-          socket.join(chatId)
+          const isMember = await Conversation.exists({
+            _id: chatId,
+            'members.userId': userId
+          })
+          if (isMember) {
+            socket.join(chatId)
+          }
         }
-      })
+      }
     })
 
     // Handle incoming message sent via WebSocket
     socket.on('send_message', async (payload, callback) => {
       try {
-        const { receiverId, text, parentMessageId, isEncrypted, iv } = payload
-        if (!receiverId || !text) {
-          if (callback) callback({ error: 'Receiver ID and text are required' })
+        if (isSocketRateLimited(socket.id)) {
+          if (callback) callback({ error: 'Rate limit exceeded. Please slow down.' })
+          return
+        }
+
+        const { receiverId, text, parentMessageId, isEncrypted, iv } = payload || {}
+        if (!receiverId || typeof text !== 'string' || !text.trim()) {
+          if (callback) callback({ error: 'Receiver ID and non-empty text are required' })
+          return
+        }
+
+        if (text.length > 10000) {
+          if (callback) callback({ error: 'Message text exceeds maximum length of 10,000 characters' })
           return
         }
 
@@ -108,6 +140,11 @@ export function init(server) {
         // Check if receiverId is a group ID or user ID
         conversation = await Conversation.findById(receiverId)
         if (conversation && conversation.isGroup) {
+          const isMember = conversation.members.some(m => m.userId.toString() === userId)
+          if (!isMember) {
+            if (callback) callback({ error: 'Forbidden: You are not a member of this group' })
+            return
+          }
           isGroup = true
           chatId = conversation._id.toString()
         } else {
@@ -526,6 +563,7 @@ export function init(server) {
 
     // Handle disconnection
     socket.on('disconnect', async () => {
+      socketRateLimitMap.delete(socket.id)
       const userSockets = activeConnections.get(userId)
       if (userSockets) {
         userSockets.delete(socket.id)

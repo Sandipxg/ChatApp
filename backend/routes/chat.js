@@ -2,6 +2,7 @@ import express from 'express'
 import * as chatController from '../controllers/chatController.js'
 import * as groupController from '../controllers/groupController.js'
 import auth from '../middleware/auth.js'
+import { mediaUploadLimiter, chatActionLimiter } from '../app.js'
 
 const router = express.Router()
 
@@ -19,22 +20,22 @@ router.get('/partners', chatController.getChatPartners)
 router.get('/conversations/:partnerId', chatController.getOrCreateConversation)
 
 // Send a text message
-router.post('/messages', chatController.sendMsg)
+router.post('/messages', chatActionLimiter, chatController.sendMsg)
 
 // Edit a text message (Topic 1: Message Editing)
-router.patch('/messages/:messageId', chatController.editMsg)
+router.patch('/messages/:messageId', chatActionLimiter, chatController.editMsg)
 
 // Delete a message for everyone (global soft delete)
-router.delete('/messages/:messageId/everyone', chatController.deleteMessageForEveryone)
+router.delete('/messages/:messageId/everyone', chatActionLimiter, chatController.deleteMessageForEveryone)
 
 // Delete a message for me (individual soft delete)
-router.delete('/messages/:messageId/me', chatController.deleteMessageForMe)
+router.delete('/messages/:messageId/me', chatActionLimiter, chatController.deleteMessageForMe)
 
 // Get Cloudinary upload signature
-router.get('/upload-signature', chatController.getUploadSignature)
+router.get('/upload-signature', mediaUploadLimiter, chatController.getUploadSignature)
 
 // Create media message
-router.post('/messages/media', chatController.createMediaMessage)
+router.post('/messages/media', mediaUploadLimiter, chatController.createMediaMessage)
 
 
 

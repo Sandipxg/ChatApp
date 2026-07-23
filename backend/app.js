@@ -13,6 +13,7 @@ import authMiddleware from './middleware/auth.js'
 import pushRoutes from './routes/push.js'
 import chatRoutes from './routes/chat.js'
 import userRoutes from './routes/user.js'
+import { sanitizeMiddleware } from './utils/sanitize.js'
 import { notFound, errorHandler } from './middleware/errorHandler.js'
 
 // Since swagger.json is a JSON file, using createRequire is the standard ESM way to import JSON
@@ -35,6 +36,24 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts, please try again in 15 minutes.' }
+})
+
+// Media Upload limiter — Cloudinary upload signatures: 10 per 1 minute per IP
+export const mediaUploadLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 10 : 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many media upload requests. Please wait a minute before trying again.' }
+})
+
+// Chat REST action limiter — message creation & group edits: 60 per 1 minute per IP
+export const chatActionLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 60 : 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many chat requests. Please slow down.' }
 })
 
 const app = express()
@@ -80,6 +99,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 // Global middlewares for routes mounted below
 app.use(express.json())
 app.use(cookieParser())
+app.use(sanitizeMiddleware)
 
 app.use('/api/push', pushRoutes)
 app.use('/api/chat', chatRoutes)

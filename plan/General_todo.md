@@ -303,9 +303,9 @@ This document tracks both the concepts to learn and the implementation progress 
 
 - [x] Encrypt messages (ECDH + AES-GCM-256)
 - [x] Key exchange
-- [ ] Secure socket events
-- [ ] Input sanitization
-- [ ] Better rate limiting
+- [x] Secure socket events
+- [x] Input sanitization
+- [x] Better rate limiting
 
 ---
 
