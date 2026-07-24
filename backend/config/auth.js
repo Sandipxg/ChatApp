@@ -7,7 +7,11 @@ import { username } from "better-auth/plugins";
 const client = mongoose.connection.getClient();
 const db = client.db();
 
+const rawFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : ''
+
 export const auth = betterAuth({
+  baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
+  secret: process.env.BETTER_AUTH_SECRET,
   database: mongodbAdapter(db, {
     client,
     // Using Better Auth's default singular collection names: user, session, account
@@ -51,6 +55,8 @@ export const auth = betterAuth({
   trustedOrigins: [
     "http://localhost:5173",
     "http://localhost:4173",
+    rawFrontendUrl,
     process.env.FRONTEND_URL
   ].filter(Boolean)
 });
+

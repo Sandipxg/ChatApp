@@ -332,6 +332,26 @@ This document tracks both the concepts to learn and the implementation progress 
 
 ---
 
+# 🔔 Phase 15: Multi-Channel Notifications (SuprSend Integration)
+
+## Learn
+
+- [ ] SuprSend architecture & SDKs (Node.js backend + React frontend)
+- [ ] User profile identification & channel preferences (Email, Push, SMS, WhatsApp, In-App)
+- [ ] SuprSend Workflows & Templates setup
+- [ ] Triggering multi-channel notification events on chat messages and offline reminders
+- [ ] Fallback routing & notification delivery tracking
+
+## Build
+
+- [ ] Install SuprSend Node.js SDK on backend (`@suprsend/node-sdk`)
+- [ ] SuprSend user profile sync on login/signup (`suprclient.user.identify`)
+- [ ] SuprSend workflow triggers for unread offline messages and mentions
+- [ ] SuprSend Inbox / Notification Center component integration in React UI
+- [ ] Notification preferences management panel in User Settings
+
+---
+
 # 🚀 Phase 16: Deployment
 
 ## Learn
@@ -347,4 +367,4 @@ This document tracks both the concepts to learn and the implementation progress 
 - [ ] Deploy backend
 - [ ] Deploy MongoDB
 - [ ] Configure HTTPS
-- [ ] Production socket testing
+- [ ] Production socket testing

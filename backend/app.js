@@ -28,11 +28,18 @@ const swaggerDocument = require('./swagger/swagger.json')
 
 const app = express()
 
+// Trust reverse proxy (required for Render / Vercel HTTPS cookies and rate limiters)
+app.set('trust proxy', 1)
+
+const rawFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : ''
+
 const allowedOrigins = [
+  rawFrontendUrl,
   process.env.FRONTEND_URL,
   'http://localhost:5173',
   'http://localhost:4173'
 ].filter(Boolean)
+
 
 app.use(cors({
   origin: (origin, callback) => {
