@@ -4,6 +4,8 @@ import { useAuth } from './AuthContext'
 
 const CallContext = createContext(null)
 
+const CALL_LOGS_KEY = 'chatapp_call_logs'
+
 // ICE configuration. Use Google free STUN servers and support optional TURN server from env.
 const RTC_CONFIG = {
   iceServers: [
@@ -32,6 +34,31 @@ export function CallProvider({ children }) {
   const [isMuted, setIsMuted] = useState(false)
   const [isCameraOff, setIsCameraOff] = useState(false)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
+  const [isSpeakerOn, setIsSpeakerOn] = useState(false)
+
+  // Peer media state updates
+  const [peerIsMuted, setPeerIsMuted] = useState(false)
+  const [peerIsCameraOff, setPeerIsCameraOff] = useState(false)
+  const [peerIsScreenSharing, setPeerIsScreenSharing] = useState(false)
+
+  // Persistent Call History Logs
+  const [callLogs, setCallLogs] = useState(() => {
+    try {
+      const saved = localStorage.getItem(CALL_LOGS_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch (e) {
+      return []
+    }
+  })
+
+  // Save call logs to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(CALL_LOGS_KEY, JSON.stringify(callLogs))
+    } catch (e) {
+      console.warn('Failed to save call logs:', e)
+    }
+  }, [callLogs])
 
   const peerConnectionRef = useRef(null)
   const localStreamRef = useRef(null)
@@ -40,8 +67,52 @@ export function CallProvider({ children }) {
   const ringtoneIntervalRef = useRef(null)
   const pendingCandidatesRef = useRef([])
 
+  // Tracking call session info for logging
+  const currentCallInfoRef = useRef(null) // { partner, type, direction }
+  const callStartTimeRef = useRef(null)
+
+  // Helper to append a call log entry
+  const recordCallLog = (finalDirection = null) => {
+    if (!currentCallInfoRef.current || !currentCallInfoRef.current.partner) return
+
+    const { partner: callPartner, type, direction: initialDir } = currentCallInfoRef.current
+    let durationStr = 'Missed'
+    let effectiveDirection = finalDirection || initialDir
+
+    if (callStartTimeRef.current) {
+      const durationSecs = Math.max(1, Math.floor((Date.now() - callStartTimeRef.current) / 1000))
+      const mins = Math.floor(durationSecs / 60)
+      const secs = durationSecs % 60
+      durationStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+    } else {
+      if (initialDir === 'incoming') {
+        effectiveDirection = 'missed'
+      } else if (initialDir === 'outgoing') {
+        durationStr = 'No Answer'
+      }
+    }
+
+    const logEntry = {
+      id: `call_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      partnerId: callPartner.id,
+      partnerName: callPartner.username || 'User',
+      partnerImage: callPartner.image || null,
+      type: type || 'voice',
+      direction: effectiveDirection,
+      duration: durationStr,
+      timestamp: new Date().toISOString()
+    }
+
+    setCallLogs((prev) => [logEntry, ...prev.slice(0, 49)])
+    currentCallInfoRef.current = null
+    callStartTimeRef.current = null
+  }
+
   // Cleanup helper to fully reset peer connections and streams
   const cleanupCall = () => {
+    // Record call log before resetting state
+    recordCallLog()
+
     // Stop local media tracks
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop())
@@ -69,6 +140,10 @@ export function CallProvider({ children }) {
     setIsMuted(false)
     setIsCameraOff(false)
     setIsScreenSharing(false)
+    setIsSpeakerOn(false)
+    setPeerIsMuted(false)
+    setPeerIsCameraOff(false)
+    setPeerIsScreenSharing(false)
     originalVideoTrackRef.current = null
   }
 
@@ -148,8 +223,16 @@ export function CallProvider({ children }) {
 
       setCallStatus('ringing')
       setCallType(type)
-      setPartner({ id: from, username: fromName, image: null })
+      const targetPartner = { id: from, username: fromName, image: null }
+      setPartner(targetPartner)
       pendingCandidatesRef.current = []
+
+      // Track incoming call session
+      currentCallInfoRef.current = {
+        partner: targetPartner,
+        type,
+        direction: 'incoming'
+      }
 
       // Store offer globally in ref to use when accepted
       socket.incomingOffer = offer
@@ -164,6 +247,7 @@ export function CallProvider({ children }) {
         try {
           await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer))
           setCallStatus('active')
+          callStartTimeRef.current = Date.now()
 
           // Flush any early candidate chunks received before remote description was set
           while (pendingCandidatesRef.current.length > 0) {
@@ -204,12 +288,19 @@ export function CallProvider({ children }) {
       cleanupCall()
     }
 
+    const handlePeerMediaToggled = ({ isMuted: peerMuted, isCameraOff: peerCamOff, isScreenSharing: peerScreen }) => {
+      if (typeof peerMuted === 'boolean') setPeerIsMuted(peerMuted)
+      if (typeof peerCamOff === 'boolean') setPeerIsCameraOff(peerCamOff)
+      if (typeof peerScreen === 'boolean') setPeerIsScreenSharing(peerScreen)
+    }
+
     socket.on('incoming_call', handleIncomingCall)
     socket.on('call_accepted', handleCallAccepted)
     socket.on('call_rejected', handleCallRejected)
     socket.on('call_busy', handleCallBusy)
     socket.on('ice_candidate', handleIceCandidate)
     socket.on('end_call', handleEndCall)
+    socket.on('peer_media_toggled', handlePeerMediaToggled)
 
     return () => {
       socket.off('incoming_call', handleIncomingCall)
@@ -218,6 +309,7 @@ export function CallProvider({ children }) {
       socket.off('call_busy', handleCallBusy)
       socket.off('ice_candidate', handleIceCandidate)
       socket.off('end_call', handleEndCall)
+      socket.off('peer_media_toggled', handlePeerMediaToggled)
     }
   }, [socket, currentUser, callStatus, partner])
 
@@ -262,7 +354,15 @@ export function CallProvider({ children }) {
     if (!socket) return
     setCallStatus('dialing')
     setCallType(type)
-    setPartner({ id: targetUser.id, username: targetUser.username, image: targetUser.image })
+    const targetPartner = { id: targetUser.id, username: targetUser.username, image: targetUser.image }
+    setPartner(targetPartner)
+
+    currentCallInfoRef.current = {
+      partner: targetPartner,
+      type,
+      direction: 'outgoing'
+    }
+    callStartTimeRef.current = null
 
     startSound('dialing')
 
@@ -328,6 +428,7 @@ export function CallProvider({ children }) {
       })
 
       setCallStatus('active')
+      callStartTimeRef.current = Date.now()
 
       // Flush early ICE candidates
       while (pendingCandidatesRef.current.length > 0) {
@@ -363,7 +464,16 @@ export function CallProvider({ children }) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0]
       if (audioTrack) {
         audioTrack.enabled = !audioTrack.enabled
-        setIsMuted(!audioTrack.enabled)
+        const nextMuted = !audioTrack.enabled
+        setIsMuted(nextMuted)
+        if (socket && partner) {
+          socket.emit('toggle_media', {
+            to: partner.id,
+            isMuted: nextMuted,
+            isCameraOff,
+            isScreenSharing
+          })
+        }
       }
     }
   }
@@ -374,7 +484,16 @@ export function CallProvider({ children }) {
       const videoTrack = localStreamRef.current.getVideoTracks()[0]
       if (videoTrack) {
         videoTrack.enabled = !videoTrack.enabled
-        setIsCameraOff(!videoTrack.enabled)
+        const nextCamOff = !videoTrack.enabled
+        setIsCameraOff(nextCamOff)
+        if (socket && partner) {
+          socket.emit('toggle_media', {
+            to: partner.id,
+            isMuted,
+            isCameraOff: nextCamOff,
+            isScreenSharing
+          })
+        }
       }
     }
   }
@@ -382,6 +501,12 @@ export function CallProvider({ children }) {
   // API 7: Screen Share Toggle (Only valid in video calls)
   const toggleScreenShare = async () => {
     if (callType !== 'video' || !peerConnectionRef.current) return
+
+    // Check desktop browser support for display media
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+      alert('Screen sharing is only supported on Desktop browsers.')
+      return
+    }
 
     if (isScreenSharing) {
       // Restore original video track
@@ -400,6 +525,15 @@ export function CallProvider({ children }) {
 
           setIsScreenSharing(false)
           originalVideoTrackRef.current = null
+
+          if (socket && partner) {
+            socket.emit('toggle_media', {
+              to: partner.id,
+              isMuted,
+              isCameraOff,
+              isScreenSharing: false
+            })
+          }
         }
       } catch (err) {
         console.error('Failed to restore camera stream:', err)
@@ -427,11 +561,38 @@ export function CallProvider({ children }) {
           }
 
           setIsScreenSharing(true)
+
+          if (socket && partner) {
+            socket.emit('toggle_media', {
+              to: partner.id,
+              isMuted,
+              isCameraOff,
+              isScreenSharing: true
+            })
+          }
         }
       } catch (err) {
         console.error('Error starting screen share:', err)
       }
     }
+  }
+
+  // API 8: Speaker Toggle
+  const toggleSpeaker = () => {
+    setIsSpeakerOn(prev => !prev)
+  }
+
+  // API 9: Clear Call Logs
+  const clearCallLogs = () => {
+    setCallLogs([])
+    try {
+      localStorage.removeItem(CALL_LOGS_KEY)
+    } catch (e) { }
+  }
+
+  // API 10: Delete single call log entry
+  const deleteCallLog = (logId) => {
+    setCallLogs((prev) => prev.filter((log) => log.id !== logId))
   }
 
   return (
@@ -445,13 +606,21 @@ export function CallProvider({ children }) {
         isMuted,
         isCameraOff,
         isScreenSharing,
+        isSpeakerOn,
+        peerIsMuted,
+        peerIsCameraOff,
+        peerIsScreenSharing,
+        callLogs,
         initiateCall,
         acceptIncomingCall,
         declineIncomingCall,
         endCurrentCall,
         toggleMic,
         toggleCamera,
-        toggleScreenShare
+        toggleScreenShare,
+        toggleSpeaker,
+        clearCallLogs,
+        deleteCallLog
       }}
     >
       {children}

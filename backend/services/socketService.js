@@ -565,6 +565,15 @@ function isSocketRateLimited(socketId, maxCount = 15, windowMs = 2000) {
       })
     })
 
+    socket.on('toggle_media', ({ to, isMuted, isCameraOff, isScreenSharing }) => {
+      socket.to(to).emit('peer_media_toggled', {
+        from: userId,
+        isMuted: !!isMuted,
+        isCameraOff: !!isCameraOff,
+        isScreenSharing: !!isScreenSharing
+      })
+    })
+
     // Handle disconnection
     socket.on('disconnect', async () => {
       socketRateLimitMap.delete(socket.id)

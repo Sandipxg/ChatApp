@@ -143,11 +143,11 @@ export default function ChatPage() {
   const { currentUser } = useAuth()
   const { chatWallpaper, enterToSend, playSounds } = useContext(ThemeContext)
   const { socket, onlineUsers, typingStatus, userActivities, isSocketConnected, sendMessageViaSocket, sendTypingStatus, sendActivityStatus, markChatAsRead, sendReaction } = useSocket()
-  const { initiateCall } = useCall()
+  const { initiateCall, callLogs, clearCallLogs, deleteCallLog } = useCall()
   const location = useLocation()
   const navigate = useNavigate()
 
-  const [activeTab, setActiveTab] = useState('chats') // 'chats' or 'contacts'
+  const [activeTab, setActiveTab] = useState('chats') // 'chats' | 'contacts' | 'calls'
   const [filterTab, setFilterTab] = useState('all') // 'all', 'unread', 'groups'
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -1734,7 +1734,7 @@ return (
 
 
       {/* Sidebar Sections Tab bar */}
-      <div className="px-4 flex items-center gap-2 select-none border-b border-gray-100 dark:border-gray-800/80 mb-2">
+      <div className="px-4 flex items-center gap-1 select-none border-b border-gray-100 dark:border-gray-800/80 mb-2">
         <button
           onClick={() => setActiveTab('chats')}
           className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm ${activeTab === 'chats'
@@ -1752,6 +1752,20 @@ return (
             }`}
         >
           Contacts
+        </button>
+        <button
+          onClick={() => setActiveTab('calls')}
+          className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm flex items-center gap-1.5 ${activeTab === 'calls'
+            ? 'text-accent border-b-2 border-accent'
+            : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+        >
+          <span>Calls</span>
+          {callLogs?.length > 0 && (
+            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-accent/15 text-accent font-extrabold">
+              {callLogs.length}
+            </span>
+          )}
         </button>
       </div>
 
@@ -1845,7 +1859,7 @@ return (
               )
             })
           )
-        ) : (
+        ) : activeTab === 'contacts' ? (
           // Contacts Sidebar List
           filteredContacts.length === 0 ? (
             <div className="p-8 text-center text-xs text-gray-400 dark:text-gray-500 font-medium">
@@ -1884,6 +1898,103 @@ return (
               )
             })
           )
+        ) : (
+          /* Calls Sidebar List */
+          <div>
+            <div className="flex items-center justify-between px-2 pb-2">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Recent Calls</span>
+              {callLogs?.length > 0 && (
+                <button
+                  onClick={clearCallLogs}
+                  className="text-[11px] font-bold text-rose-500 hover:underline cursor-pointer"
+                >
+                  Clear History
+                </button>
+              )}
+            </div>
+
+            {(!callLogs || callLogs.filter(l => !searchQuery.trim() || l.partnerName?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0) ? (
+              <div className="p-8 text-center text-xs text-gray-400 dark:text-gray-500 font-medium leading-relaxed">
+                No recent calls.<br />Your voice and video call history will appear here.
+              </div>
+            ) : (
+              callLogs.filter(l => !searchQuery.trim() || l.partnerName?.toLowerCase().includes(searchQuery.toLowerCase())).map((log) => {
+                const targetPartner = contacts.find(c => c.id === log.partnerId) || partners.find(p => p.id === log.partnerId) || { id: log.partnerId, username: log.partnerName, image: log.partnerImage }
+                const isMissed = log.direction === 'missed'
+                const isIncoming = log.direction === 'incoming'
+
+                return (
+                  <div
+                    key={log.id}
+                    className="group flex items-center justify-between p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all duration-150 relative border border-transparent hover:border-border-app"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {log.partnerImage ? (
+                        <img src={log.partnerImage} alt={log.partnerName} className="w-11 h-11 rounded-full object-cover border border-border-app shrink-0" />
+                      ) : (
+                        <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0 ${getAvatarBg(log.partnerId)}`}>
+                          {getInitials(log.partnerName)}
+                        </div>
+                      )}
+
+                      <div className="min-w-0 flex-1 text-left">
+                        <p className={`font-bold text-sm truncate ${isMissed ? 'text-rose-500 dark:text-rose-400' : 'text-text-title'}`}>
+                          {log.partnerName}
+                        </p>
+
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400 mt-0.5">
+                          {isMissed ? (
+                            <svg className="w-3.5 h-3.5 text-rose-500 shrink-0 rotate-[135deg]" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 4.5-15 15m0 0h11.25m-11.25 0V8.25" />
+                            </svg>
+                          ) : isIncoming ? (
+                            <svg className="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 4.5-15 15m0 0h11.25m-11.25 0V8.25" />
+                            </svg>
+                          ) : (
+                            <svg className="w-3.5 h-3.5 text-sky-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
+                            </svg>
+                          )}
+
+                          <span className="font-semibold">{log.type === 'video' ? 'Video' : 'Voice'}</span>
+                          <span>•</span>
+                          <span>{log.duration}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          initiateCall(targetPartner, 'voice')
+                        }}
+                        className="p-2 rounded-full text-gray-400 hover:text-emerald-500 hover:bg-emerald-500/10 transition-all cursor-pointer"
+                        title="Voice Call Back"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.824-1.47-5.112-3.758-6.58-6.58l1.293-.97c.362-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          initiateCall(targetPartner, 'video')
+                        }}
+                        className="p-2 rounded-full text-gray-400 hover:text-indigo-500 hover:bg-indigo-500/10 transition-all cursor-pointer"
+                        title="Video Call Back"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
         )}
       </div>
     </div>

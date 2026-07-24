@@ -11,12 +11,17 @@ export default function CallModal() {
     isMuted,
     isCameraOff,
     isScreenSharing,
+    isSpeakerOn,
+    peerIsMuted,
+    peerIsCameraOff,
+    peerIsScreenSharing,
     acceptIncomingCall,
     declineIncomingCall,
     endCurrentCall,
     toggleMic,
     toggleCamera,
-    toggleScreenShare
+    toggleScreenShare,
+    toggleSpeaker
   } = useCall()
 
   const localVideoRef = useRef(null)
@@ -41,24 +46,24 @@ export default function CallModal() {
     }
   }, [callStatus])
 
-  // Bind local video stream
+  // Bind local video stream with isCameraOff dependency so camera re-enables cleanly without blank screen
   useEffect(() => {
-    if (localVideoRef.current && localStream && callType === 'video') {
+    if (localVideoRef.current && localStream && callType === 'video' && !isCameraOff) {
       localVideoRef.current.srcObject = localStream
       localVideoRef.current.play().catch((err) => console.warn('Local video play error:', err))
     }
-  }, [localStream, callType, callStatus])
+  }, [localStream, callType, callStatus, isCameraOff])
 
-  // Bind remote video/audio stream
+  // Bind remote video/audio stream with peer state dependencies
   useEffect(() => {
-    if (callType === 'video' && remoteVideoRef.current && remoteStream) {
+    if (callType === 'video' && remoteVideoRef.current && remoteStream && !peerIsCameraOff) {
       remoteVideoRef.current.srcObject = remoteStream
       remoteVideoRef.current.play().catch((err) => console.warn('Remote video play error:', err))
     } else if (callType === 'voice' && remoteAudioRef.current && remoteStream) {
       remoteAudioRef.current.srcObject = remoteStream
       remoteAudioRef.current.play().catch((err) => console.warn('Remote audio play error:', err))
     }
-  }, [remoteStream, callType, callStatus])
+  }, [remoteStream, callType, callStatus, peerIsCameraOff])
 
   if (callStatus === 'idle') return null
 
@@ -73,32 +78,53 @@ export default function CallModal() {
     return name.trim().charAt(0).toUpperCase()
   }
 
+  const isScreenActive = isScreenSharing || peerIsScreenSharing
+
   return (
     <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 text-white select-none overflow-hidden flex flex-col justify-between animate-fade-in">
       
       {/* Hidden Audio Player for Voice calls */}
       {callType === 'voice' && <audio ref={remoteAudioRef} autoPlay playsInline />}
 
-      {/* --- FLOATING TOP HEADER (Active & Dialing & Ringing) --- */}
+      {/* --- FLOATING TOP HEADER --- */}
       <div className="absolute top-4 left-4 right-4 md:top-6 md:left-6 md:right-6 z-40 flex items-center justify-between pointer-events-none">
-        <div className="pointer-events-auto flex items-center gap-3 bg-slate-900/70 backdrop-blur-xl border border-white/10 px-4 py-2.5 rounded-full shadow-2xl">
-          {partner?.image ? (
-            <img src={partner.image} alt={partner.username} className="w-9 h-9 rounded-full object-cover ring-2 ring-white/20" />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm ring-2 ring-white/20">
-              {getInitials(partner?.username)}
-            </div>
-          )}
+        <div className="pointer-events-auto flex items-center gap-3 bg-slate-900/80 backdrop-blur-xl border border-white/10 px-4 py-2.5 rounded-full shadow-2xl">
+          <div className="relative">
+            {partner?.image ? (
+              <img src={partner.image} alt={partner.username} className="w-9 h-9 rounded-full object-cover ring-2 ring-white/20" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm ring-2 ring-white/20">
+                {getInitials(partner?.username)}
+              </div>
+            )}
+            {/* Peer Muted Mic Red Badge on Avatar */}
+            {peerIsMuted && callStatus === 'active' && (
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-rose-600 border border-slate-950 flex items-center justify-center text-white" title="Partner Mic Muted">
+                <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth="3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5" />
+                </svg>
+              </div>
+            )}
+          </div>
           <div className="text-left pr-2">
-            <p className="font-bold text-sm tracking-wide leading-tight truncate max-w-[160px] sm:max-w-[240px]">{partner?.username || 'User'}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-sm tracking-wide leading-tight truncate max-w-[140px] sm:max-w-[220px]">{partner?.username || 'User'}</p>
+              {peerIsMuted && callStatus === 'active' && (
+                <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  Muted
+                </span>
+              )}
+            </div>
             <p className="text-[10px] text-slate-300 font-semibold tracking-wider uppercase">
-              {callStatus === 'active' ? (callType === 'video' ? 'Video Call' : 'Voice Call') : callStatus}
+              {callStatus === 'active' ? (isScreenActive ? 'Screen Sharing' : (callType === 'video' ? 'Video Call' : 'Voice Call')) : callStatus}
             </p>
           </div>
         </div>
 
         {callStatus === 'active' && (
-          <div className="pointer-events-auto bg-slate-900/70 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full text-xs font-mono tracking-widest text-emerald-400 shadow-2xl flex items-center gap-2">
+          <div className="pointer-events-auto bg-slate-900/80 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full text-xs font-mono tracking-widest text-emerald-400 shadow-2xl flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>{formatTimer(callDuration)}</span>
           </div>
@@ -112,11 +138,9 @@ export default function CallModal() {
         {callStatus === 'dialing' && (
           <div className="flex flex-col items-center justify-center space-y-6 animate-fade-in z-20">
             <div className="relative flex items-center justify-center w-40 h-40">
-              {/* Outer pulsing ripples */}
               <div className="absolute inset-0 rounded-full bg-indigo-500/20 animate-ping duration-1000"></div>
               <div className="absolute inset-4 rounded-full bg-indigo-500/30 animate-pulse duration-700"></div>
               
-              {/* User avatar */}
               {partner?.image ? (
                 <img src={partner.image} alt={partner.username} className="relative w-32 h-32 rounded-full object-cover shadow-2xl ring-4 ring-indigo-500/50" />
               ) : (
@@ -178,7 +202,7 @@ export default function CallModal() {
           </div>
         )}
 
-        {/* --- STATE 3: ACTIVE CALL (FULL SCREEN) --- */}
+        {/* --- STATE 3: ACTIVE CALL --- */}
         {callStatus === 'active' && (
           <div className="relative w-full h-full flex items-center justify-center bg-slate-950">
             
@@ -186,13 +210,24 @@ export default function CallModal() {
             {callType === 'video' ? (
               <div className="relative w-full h-full bg-slate-950 overflow-hidden flex items-center justify-center">
                 
-                {/* Remote Video (Full Screen Backdrop) */}
-                {remoteStream ? (
+                {/* Remote Video Stream */}
+                {peerIsCameraOff ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center space-y-4 bg-slate-950">
+                    <div className="w-24 h-24 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center">
+                      <svg className="w-12 h-12 text-slate-500" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
+                        <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth="2.5" />
+                      </svg>
+                    </div>
+                    <p className="text-sm text-slate-400 font-semibold">{partner?.username || 'Partner'} paused their video</p>
+                  </div>
+                ) : remoteStream ? (
                   <video
                     ref={remoteVideoRef}
                     autoPlay
                     playsInline
-                    className="w-full h-full object-cover"
+                    /* Fix screen sharing zooming issue: use object-contain when screen sharing is active */
+                    className={`w-full h-full ${isScreenActive ? 'object-contain bg-slate-950' : 'object-cover'}`}
                   />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center space-y-4 bg-slate-950">
@@ -201,11 +236,11 @@ export default function CallModal() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
                       </svg>
                     </div>
-                    <p className="text-sm text-slate-300 font-semibold animate-pulse">Establishing video connection...</p>
+                    <p className="text-sm text-slate-300 font-semibold animate-pulse">Establishing video stream...</p>
                   </div>
                 )}
 
-                {/* Local Video Stream (Picture-in-Picture Overlay) */}
+                {/* Local Video Stream (PIP) */}
                 <div className="absolute bottom-24 right-4 sm:bottom-28 sm:right-6 w-36 sm:w-52 md:w-64 aspect-[3/4] sm:aspect-video rounded-2xl border-2 border-white/20 shadow-2xl overflow-hidden bg-slate-900 z-30 transition-all hover:scale-[1.02]">
                   {isCameraOff ? (
                     <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-xs text-slate-400 font-bold space-y-2">
@@ -231,7 +266,7 @@ export default function CallModal() {
               /* VOICE CALL VIEWPORT */
               <div className="flex flex-col items-center justify-center space-y-8 animate-fade-in z-20">
                 <div className="relative flex items-center justify-center w-48 h-48">
-                  {/* Wave effect */}
+                  {/* Ripple wave */}
                   <div className="absolute inset-0 rounded-full bg-indigo-500/10 animate-ping duration-[3000ms]"></div>
                   <div className="absolute inset-6 rounded-full bg-indigo-500/20 animate-pulse duration-[2000ms]"></div>
                   
@@ -240,6 +275,16 @@ export default function CallModal() {
                   ) : (
                     <div className="relative w-36 h-36 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-bold text-4xl shadow-2xl ring-4 ring-indigo-500/40">
                       {getInitials(partner?.username)}
+                    </div>
+                  )}
+
+                  {/* Red Muted Badge on Voice Avatar */}
+                  {peerIsMuted && (
+                    <div className="absolute top-2 right-2 bg-rose-600 text-white p-2 rounded-full border-2 border-slate-950 shadow-xl animate-bounce">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" strokeWidth="3" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5" />
+                      </svg>
                     </div>
                   )}
                 </div>
@@ -254,9 +299,9 @@ export default function CallModal() {
         )}
       </div>
 
-      {/* --- FLOATING BOTTOM CONTROL BAR (Active & Dialing) --- */}
+      {/* --- FLOATING BOTTOM CONTROL BAR --- */}
       {callStatus !== 'ringing' && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/80 backdrop-blur-xl border border-white/15 px-6 py-3 rounded-full flex items-center gap-5 md:gap-7 shadow-2xl">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/85 backdrop-blur-xl border border-white/15 px-5 py-3 rounded-full flex items-center gap-4 sm:gap-6 shadow-2xl">
           {callStatus === 'active' && (
             <>
               {/* Microphone toggle */}
@@ -281,7 +326,28 @@ export default function CallModal() {
                 )}
               </button>
 
-              {/* Video camera toggle */}
+              {/* Speaker Toggle Button */}
+              <button
+                onClick={toggleSpeaker}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                  isSpeakerOn
+                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                    : 'bg-white/10 text-white hover:bg-white/20'
+                }`}
+                title={isSpeakerOn ? 'Speaker On' : 'Speaker Off'}
+              >
+                {isSpeakerOn ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.287a6 6 0 010 7.427M11.25 5.25l-4.5 3.75H3v6h3.75l4.5 3.75v-13.5z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 9.75L19.5 12m0 0l2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25M11.25 5.25l-4.5 3.75H3v6h3.75l4.5 3.75v-13.5z" />
+                  </svg>
+                )}
+              </button>
+
+              {/* Video Camera Toggle Button */}
               {callType === 'video' && (
                 <button
                   onClick={toggleCamera}
@@ -305,7 +371,7 @@ export default function CallModal() {
                 </button>
               )}
 
-              {/* Screen Share toggle */}
+              {/* Screen Share Toggle Button */}
               {callType === 'video' && (
                 <button
                   onClick={toggleScreenShare}
