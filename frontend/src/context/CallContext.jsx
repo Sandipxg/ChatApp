@@ -4,15 +4,21 @@ import { useAuth } from './AuthContext'
 
 const CallContext = createContext(null)
 
-// ICE configuration. Use Google free STUN server by default.
+// ICE configuration. Use Google free STUN servers and support optional TURN server from env.
 const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' }
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    ...(import.meta.env.VITE_TURN_SERVER_URL ? [{
+      urls: import.meta.env.VITE_TURN_SERVER_URL,
+      username: import.meta.env.VITE_TURN_SERVER_USERNAME || '',
+      credential: import.meta.env.VITE_TURN_SERVER_PASSWORD || ''
+    }] : [])
   ]
-}  // when our backend pings at this rtc urls , that urls sends us back our ip address 
-// so our backend will use this public ip to send video/audio packets for constant connection streams . 
+} 
 
 export function CallProvider({ children }) {
   const { socket, onlineUsers } = useSocket()
@@ -235,7 +241,7 @@ export function CallProvider({ children }) {
     // Listen for gathered local ICE candidates and send them to the peer
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socket.emit('ice-candidate', {
+        socket.emit('ice_candidate', {
           to: targetUserId,
           candidate: event.candidate
         })
