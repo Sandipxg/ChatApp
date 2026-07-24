@@ -9,6 +9,8 @@ const db = client.db();
 
 const rawFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : ''
 
+const isHttps = process.env.BETTER_AUTH_URL?.startsWith('https') || process.env.NODE_ENV === 'production'
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
   secret: process.env.BETTER_AUTH_SECRET,
@@ -20,12 +22,13 @@ export const auth = betterAuth({
     storeStateStrategy: "database",
   },
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === 'production',
-    defaultCookieAttributes: process.env.NODE_ENV === 'production' ? {
+    useSecureCookies: isHttps,
+    defaultCookieAttributes: isHttps ? {
       sameSite: "none",
       secure: true,
     } : {},
   },
+
   emailAndPassword: {
     enabled: true,
   },
