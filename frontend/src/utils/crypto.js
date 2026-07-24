@@ -18,25 +18,79 @@ function openCryptoDB() {
 }
 
 async function saveKeyPairToIndexedDB(userId, keyPair) {
-  const db = await openCryptoDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite')
-    const store = tx.objectStore(STORE_NAME)
-    store.put(keyPair, userId)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+  try {
+    const privateJwk = await window.crypto.subtle.exportKey('jwk', keyPair.privateKey)
+    const publicJwk = await window.crypto.subtle.exportKey('jwk', keyPair.publicKey)
+
+    const db = await openCryptoDB()
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite')
+      const store = tx.objectStore(STORE_NAME)
+      store.put({ privateJwk, publicJwk }, userId)
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+    })
+
+    // Also cache in localStorage as secondary fallback across page reloads & mobile webviews
+    try {
+      localStorage.setItem(`chatapp_ecdh_key_${userId}`, JSON.stringify({ privateJwk, publicJwk }))
+    } catch (e) { }
+  } catch (err) {
+    console.error('Error saving key pair to storage:', err)
+  }
 }
 
 async function getKeyPairFromIndexedDB(userId) {
-  const db = await openCryptoDB()
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly')
-    const store = tx.objectStore(STORE_NAME)
-    const req = store.get(userId)
-    req.onsuccess = () => resolve(req.result || null)
-    req.onerror = () => reject(req.error)
-  })
+  try {
+    let record = null
+    try {
+      const db = await openCryptoDB()
+      record = await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly')
+        const store = tx.objectStore(STORE_NAME)
+        const req = store.get(userId)
+        req.onsuccess = () => resolve(req.result || null)
+        req.onerror = () => reject(req.error)
+      })
+    } catch (e) { }
+
+    if (!record || !record.privateJwk || !record.publicJwk) {
+      // Fallback to localStorage if IndexedDB returned empty
+      try {
+        const local = localStorage.getItem(`chatapp_ecdh_key_${userId}`)
+        if (local) record = JSON.parse(local)
+      } catch (e) { }
+    }
+
+    if (!record || !record.privateJwk || !record.publicJwk) return null
+
+    const privateKey = await window.crypto.subtle.importKey(
+      'jwk',
+      record.privateJwk,
+      {
+        name: 'ECDH',
+        namedCurve: 'P-256',
+      },
+      true,
+      ['deriveKey', 'deriveBits']
+    )
+
+    const publicKey = await window.crypto.subtle.importKey(
+      'jwk',
+      record.publicJwk,
+      {
+        name: 'ECDH',
+        namedCurve: 'P-256',
+      },
+      true,
+      []
+    )
+
+    return { privateKey, publicKey }
+  } catch (err) {
+    console.warn('Failed to retrieve or import crypto keys from storage:', err)
+    return null
+  }
 }
 
 /**
