@@ -56,7 +56,9 @@ export const auth = betterAuth({
     "http://localhost:5173",
     "http://localhost:4173",
     rawFrontendUrl,
-    process.env.FRONTEND_URL
+    process.env.FRONTEND_URL,
+    "https://*.vercel.app"
   ].filter(Boolean)
+
 });
 

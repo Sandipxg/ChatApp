@@ -12,7 +12,10 @@ let io = null
 const activeConnections = new Map()
 
 export function init(server) {
+  const rawFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : ''
+
   const allowedOrigins = [
+    rawFrontendUrl,
     process.env.FRONTEND_URL,
     'http://localhost:5173',
     'http://localhost:4173'
@@ -23,14 +26,15 @@ export function init(server) {
     pingTimeout: 5000,
     cors: {
       origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
           return callback(null, true)
         }
-        return callback(new Error('Not allowed by CORS'))
+        return callback(null, false)
       },
       credentials: true
     }
   })
+
 
   // Middleware to authenticate socket connections with Better Auth session cookies
   io.use(async (socket, next) => {
