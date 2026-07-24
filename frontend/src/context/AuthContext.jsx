@@ -2,33 +2,67 @@ import { createContext, useState, useContext, useEffect } from "react"
 import { authClient } from "../services/auth-client"
 
 const AuthContext = createContext(null)
+const AUTH_USER_KEY = "chatapp_auth_user"
 
 export function AuthProvider({ children }) {
-  const [currentUser, setCurrentUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  // Initialize currentUser from localStorage for instant mobile app cold start
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem(AUTH_USER_KEY)
+      return cached ? JSON.parse(cached) : null
+    } catch (e) {
+      return null
+    }
+  })
+
+  // Loading state is false initially if we already have a cached user in localStorage
+  const [loading, setLoading] = useState(() => {
+    try {
+      return !localStorage.getItem(AUTH_USER_KEY)
+    } catch (e) {
+      return true
+    }
+  })
+
+  const persistUser = (userObj) => {
+    if (userObj) {
+      setCurrentUser(userObj)
+      try {
+        localStorage.setItem(AUTH_USER_KEY, JSON.stringify(userObj))
+      } catch (e) { }
+    } else {
+      setCurrentUser(null)
+      try {
+        localStorage.removeItem(AUTH_USER_KEY)
+      } catch (e) { }
+    }
+  }
 
   // Use Better Auth's session observer
   const sessionQuery = authClient.useSession()
   const session = sessionQuery?.data
   const isPending = sessionQuery?.isPending
+  const sessionError = sessionQuery?.error
 
   useEffect(() => {
     if (!isPending) {
       if (session?.user) {
-        setCurrentUser({
+        const userData = {
           id: session.user.id,
           email: session.user.email,
           username: session.user.username || session.user.name || "",
           reminderTime: session.user.reminderTime,
           timezone: session.user.timezone,
           image: session.user.image || "",
-        })
-      } else {
-        setCurrentUser(null)
+        }
+        persistUser(userData)
+      } else if (sessionError && (sessionError.status === 401 || sessionError.status === 403)) {
+        // Only wipe user session if server explicitly confirms 401/403 Unauthorized
+        persistUser(null)
       }
       setLoading(false)
     }
-  }, [session, isPending])
+  }, [session, isPending, sessionError])
 
   async function signup(email, username, password, name) {
     const { data, error } = await authClient.signUp.email({
@@ -43,14 +77,15 @@ export function AuthProvider({ children }) {
     }
 
     if (data?.user) {
-      setCurrentUser({
+      const userData = {
         id: data.user.id,
         email: data.user.email,
         username: data.user.username || data.user.name || "",
         reminderTime: data.user.reminderTime,
         timezone: data.user.timezone,
         image: data.user.image || "",
-      })
+      }
+      persistUser(userData)
     }
   }
 
@@ -65,23 +100,25 @@ export function AuthProvider({ children }) {
     }
 
     if (data?.user) {
-      setCurrentUser({
+      const userData = {
         id: data.user.id,
         email: data.user.email,
         username: data.user.username || data.user.name || "",
         reminderTime: data.user.reminderTime,
         timezone: data.user.timezone,
         image: data.user.image || "",
-      })
+      }
+      persistUser(userData)
     }
   }
 
   async function logout() {
-    const { error } = await authClient.signOut()
-    if (error) {
-      console.error("Failed to sign out on Better Auth:", error)
+    persistUser(null)
+    try {
+      await authClient.signOut()
+    } catch (e) {
+      console.error("Failed to sign out on Better Auth:", e)
     }
-    setCurrentUser(null)
   }
 
   async function deleteAccount(password) {
@@ -95,8 +132,10 @@ export function AuthProvider({ children }) {
     const data = await res.json()
     if (!res.ok) throw new Error(data.error)
 
-    await authClient.signOut()
-    setCurrentUser(null)
+    persistUser(null)
+    try {
+      await authClient.signOut()
+    } catch (e) { }
     return data
   }
 
@@ -115,12 +154,14 @@ export function AuthProvider({ children }) {
       reminderTime: data.reminderTime, 
       timezone: data.timezone 
     }
-    setCurrentUser(updatedUser)
+    persistUser(updatedUser)
     return updatedUser
   }
 
   function updateUserImage(imageUrl) {
-    setCurrentUser(prev => prev ? { ...prev, image: imageUrl } : null)
+    if (!currentUser) return
+    const updatedUser = { ...currentUser, image: imageUrl }
+    persistUser(updatedUser)
   }
 
   return (
