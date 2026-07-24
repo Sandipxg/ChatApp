@@ -41,14 +41,19 @@ export function sanitizeObject(obj) {
  * Express middleware to automatically sanitize req.body, req.query, and req.params.
  */
 export function sanitizeMiddleware(req, res, next) {
-  if (req.body) {
+  if (req.body && typeof req.body === 'object') {
     req.body = sanitizeObject(req.body)
   }
-  if (req.query) {
-    req.query = sanitizeObject(req.query)
+  if (req.query && typeof req.query === 'object') {
+    const cleanQuery = sanitizeObject(req.query)
+    for (const key of Object.keys(req.query)) {
+      delete req.query[key]
+    }
+    Object.assign(req.query, cleanQuery)
   }
-  if (req.params) {
+  if (req.params && typeof req.params === 'object') {
     req.params = sanitizeObject(req.params)
   }
   next()
 }
+

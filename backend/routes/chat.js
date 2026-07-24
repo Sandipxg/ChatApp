@@ -2,7 +2,8 @@ import express from 'express'
 import * as chatController from '../controllers/chatController.js'
 import * as groupController from '../controllers/groupController.js'
 import auth from '../middleware/auth.js'
-import { mediaUploadLimiter, chatActionLimiter } from '../app.js'
+import { mediaUploadLimiter, chatActionLimiter } from '../middleware/rateLimiters.js'
+
 
 const router = express.Router()
 

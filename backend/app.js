@@ -2,7 +2,6 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import cookieParser from 'cookie-parser'
-import rateLimit from 'express-rate-limit'
 import swaggerUi from 'swagger-ui-express'
 import { createRequire } from 'module'
 import { toNodeHandler } from 'better-auth/node'
@@ -10,51 +9,22 @@ import { toNodeHandler } from 'better-auth/node'
 import { auth } from './config/auth.js'
 import * as authController from './controllers/authController.js'
 import authMiddleware from './middleware/auth.js'
+import { sanitizeMiddleware } from './utils/sanitize.js'
+import { notFound, errorHandler } from './middleware/errorHandler.js'
+import { globalLimiter, authLimiter, mediaUploadLimiter, chatActionLimiter } from './middleware/rateLimiters.js'
+
 import pushRoutes from './routes/push.js'
 import chatRoutes from './routes/chat.js'
 import userRoutes from './routes/user.js'
-import { sanitizeMiddleware } from './utils/sanitize.js'
-import { notFound, errorHandler } from './middleware/errorHandler.js'
+import healthRoutes from './routes/health.js'
+
+export { mediaUploadLimiter, chatActionLimiter }
 
 // Since swagger.json is a JSON file, using createRequire is the standard ESM way to import JSON
 const require = createRequire(import.meta.url)
 const swaggerDocument = require('./swagger/swagger.json')
 
-// Global limiter — all routes: 100 requests per 15 minutes per IP
-const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 100 : 10000,
-  standardHeaders: true,   // sends RateLimit-* headers to client
-  legacyHeaders: false,
-  message: { error: 'Too many requests, please try again later.' }
-})
 
-// Auth limiter — login/signup only: 10 attempts per 15 minutes per IP
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 10 : 1000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many login attempts, please try again in 15 minutes.' }
-})
-
-// Media Upload limiter — Cloudinary upload signatures: 10 per 1 minute per IP
-export const mediaUploadLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 10 : 200,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many media upload requests. Please wait a minute before trying again.' }
-})
-
-// Chat REST action limiter — message creation & group edits: 60 per 1 minute per IP
-export const chatActionLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: process.env.NODE_ENV === 'production' ? 60 : 1000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many chat requests. Please slow down.' }
-})
 
 const app = express()
 
@@ -104,6 +74,7 @@ app.use(sanitizeMiddleware)
 app.use('/api/push', pushRoutes)
 app.use('/api/chat', chatRoutes)
 app.use('/api/user', userRoutes)
+app.use('/api/health', healthRoutes)
 
 app.use(notFound)
 app.use(errorHandler)
