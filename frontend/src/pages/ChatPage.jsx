@@ -2911,20 +2911,20 @@ return (
                 <button
                   type="button"
                   onClick={() => stopRecording(true)}
-                  className="w-12 h-12 rounded-full flex items-center justify-center bg-red-500 text-white shadow-lg shadow-red-500/25 hover:bg-red-650 hover:shadow-red-500/35 transition-all active:scale-95 flex-shrink-0 cursor-pointer animate-pulse"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center bg-red-500 text-white shadow-md shadow-red-500/25 hover:bg-red-650 transition-all active:scale-95 flex-shrink-0 cursor-pointer animate-pulse"
                   title="Send Voice Note"
                 >
-                  <svg className="w-5 h-5 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-none stroke-current" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                   </svg>
                 </button>
               ) : inputText.trim() ? (
                 <button
                   type="submit"
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white transition-all active:scale-95 flex-shrink-0 bg-gradient-to-br from-accent to-indigo-600 shadow-lg shadow-accent/35 hover:shadow-accent/50 animate-glow cursor-pointer"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center text-white transition-all active:scale-95 flex-shrink-0 bg-accent hover:bg-accent-hover shadow-md shadow-accent/25 cursor-pointer"
                   title="Send Message"
                 >
-                  <svg className="w-5 h-5 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 transform rotate-90" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
                   </svg>
                 </button>
@@ -2932,10 +2932,10 @@ return (
                 <button
                   type="button"
                   onClick={startRecording}
-                  className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-accent hover:text-white hover:shadow-lg hover:shadow-accent/35 transition-all active:scale-95 flex-shrink-0 cursor-pointer"
+                  className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-accent hover:text-white transition-all active:scale-95 flex-shrink-0 cursor-pointer"
                   title="Record Voice Note"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 0 3-3v-6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" />
                   </svg>
                 </button>

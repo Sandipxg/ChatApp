@@ -351,10 +351,17 @@ export function CallProvider({ children }) {
 
   // API 1: Start call (Outgoing)
   const initiateCall = async (targetUser, type) => {
-    if (!socket) return
+    if (!socket || !targetUser) return
+    const targetId = targetUser.id || targetUser._id
+    if (!targetId) {
+      alert('Could not start call: Invalid user identifier')
+      return
+    }
+    
     setCallStatus('dialing')
     setCallType(type)
-    const targetPartner = { id: targetUser.id, username: targetUser.username, image: targetUser.image }
+    const targetName = targetUser.name || targetUser.username || 'User'
+    const targetPartner = { id: targetId, username: targetName, name: targetName, image: targetUser.image }
     setPartner(targetPartner)
 
     currentCallInfoRef.current = {
@@ -377,7 +384,7 @@ export function CallProvider({ children }) {
       setLocalStream(stream)
 
       // Initialize RTC Peer Connection
-      const pc = createPeerConnection(targetUser.id, stream)
+      const pc = createPeerConnection(targetId, stream)
 
       // Create Offer SDP
       const offer = await pc.createOffer()
@@ -385,13 +392,13 @@ export function CallProvider({ children }) {
 
       // Send offer to callee
       socket.emit('call_user', {
-        to: targetUser.id,
+        to: targetId,
         offer,
         type
       })
     } catch (err) {
       console.error('Error starting WebRTC media capture:', err)
-      alert('Could not access camera/microphone. Please check permissions.')
+      alert('Could not access camera/microphone. Please check browser permissions.')
       cleanupCall()
     }
   }

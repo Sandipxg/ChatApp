@@ -81,7 +81,7 @@ export default function CallModal() {
   const isScreenActive = isScreenSharing || peerIsScreenSharing
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 text-white select-none overflow-hidden flex flex-col justify-between animate-fade-in">
+    <div className="fixed inset-0 z-50 w-screen h-[100dvh] bg-[#0b141a] text-white select-none overflow-hidden flex flex-col justify-between animate-fade-in">
       
       {/* Hidden Audio Player for Voice calls */}
       {callType === 'voice' && <audio ref={remoteAudioRef} autoPlay playsInline />}
