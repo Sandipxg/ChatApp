@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useContext } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeContext from '../context/ThemeContext'
-import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage, deleteMessageForEveryone, deleteMessageForMe, uploadPublicKey, fetchUserPublicKey } from '../services/chatService'
+import { fetchContacts, fetchPartners, fetchMessages, createGroup, addMembers, removeMember, updateGroupRole, updateGroupDetails, leaveGroup, fetchUploadSignature, uploadDirectToCloudinary, sendMediaMessage, editMessage, deleteMessageForEveryone, deleteMessageForMe, uploadPublicKey, fetchUserPublicKey, searchUsersByUsername } from '../services/chatService'
 import { getOrGenerateUserECDHKeyPair, exportPublicKeyJWK, importPublicKeyJWK, deriveSharedAESKey, encryptMessageText, decryptMessageText } from '../utils/crypto'
 import { useSocket } from '../context/SocketContext'
 import { useCall } from '../context/CallContext'
@@ -147,9 +147,14 @@ export default function ChatPage() {
   const location = useLocation()
   const navigate = useNavigate()
 
-  const [activeTab, setActiveTab] = useState('chats') // 'chats' | 'contacts' | 'calls'
+  const [activeTab, setActiveTab] = useState('chats') // 'chats' | 'explore' | 'calls'
   const [filterTab, setFilterTab] = useState('all') // 'all', 'unread', 'groups'
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Explore / Username Search states
+  const [exploreQuery, setExploreQuery] = useState('')
+  const [exploreResults, setExploreResults] = useState([])
+  const [exploreLoading, setExploreLoading] = useState(false)
 
   const [contacts, setContacts] = useState([])
   const [partners, setPartners] = useState([])
@@ -163,6 +168,28 @@ export default function ChatPage() {
   const [error, setError] = useState(null)
   const [currentPinIndex, setCurrentPinIndex] = useState(0)
   const [replyingToMessage, setReplyingToMessage] = useState(null)
+
+  // Live username search effect with 300ms debounce
+  useEffect(() => {
+    const query = exploreQuery.trim().replace(/^@/, '')
+    if (!query) {
+      setExploreResults([])
+      setExploreLoading(false)
+      return
+    }
+
+    setExploreLoading(true)
+    const timer = setTimeout(() => {
+      searchUsersByUsername(query)
+        .then((results) => {
+          setExploreResults(results)
+        })
+        .catch(console.error)
+        .finally(() => setExploreLoading(false))
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [exploreQuery])
 
   // Phase 13 E2EE State variables
   const [userECDHKeyPair, setUserECDHKeyPair] = useState(null)
@@ -1748,13 +1775,13 @@ return (
           Partners
         </button>
         <button
-          onClick={() => setActiveTab('contacts')}
-          className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm ${activeTab === 'contacts'
+          onClick={() => setActiveTab('explore')}
+          className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm ${activeTab === 'explore'
             ? 'text-accent border-b-2 border-accent'
             : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
         >
-          Contacts
+          Explore
         </button>
         <button
           onClick={() => setActiveTab('calls')}
@@ -1807,7 +1834,7 @@ return (
                       <img src={partner.image} alt={partner.username} className="w-12 h-12 rounded-full object-cover border-2 border-border-app shadow-sm" />
                     ) : (
                       <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base shadow-sm ${getAvatarBg(partner.id)}`}>
-                        {partner.isGroup ? '👥' : getInitials(partner.username)}
+                        {partner.isGroup ? '👥' : getInitials(partner.name || partner.username)}
                       </div>
                     )}
                     {!partner.isGroup && isOnline && (
@@ -1816,8 +1843,17 @@ return (
                   </div>
 
                   <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between">
-                      <span className={`text-sm font-bold truncate max-w-[150px] ${isSelected ? 'text-accent' : 'text-text-title'}`}>{partner.username}</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                        <span className={`text-sm font-bold truncate max-w-[130px] ${isSelected ? 'text-accent' : 'text-text-title'}`}>
+                          {partner.name || partner.username}
+                        </span>
+                        {!partner.isGroup && partner.username && (
+                          <span className="text-[11px] text-gray-400 font-mono font-normal truncate max-w-[85px] shrink-0">
+                            @{partner.username}
+                          </span>
+                        )}
+                      </div>
                       {partner.latestMessage && (
                         <span className="text-[11px] text-gray-400 font-medium select-none flex-shrink-0 ml-1">
                           {partner.latestMessage.createdAt.includes('T') ? formatTime(partner.latestMessage.createdAt) : partner.latestMessage.createdAt}
@@ -1862,45 +1898,80 @@ return (
               )
             })
           )
-        ) : activeTab === 'contacts' ? (
-          // Contacts Sidebar List
-          filteredContacts.length === 0 ? (
-            <div className="p-8 text-center text-xs text-gray-400 dark:text-gray-500 font-medium">
-              No contacts found.
+        ) : activeTab === 'explore' ? (
+          /* Explore / Username Search Section */
+          <div className="p-2 space-y-3">
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs select-none">@</span>
+              <input
+                type="text"
+                value={exploreQuery}
+                onChange={(e) => setExploreQuery(e.target.value)}
+                placeholder="Search username..."
+                className="w-full pl-8 pr-8 py-2.5 bg-bg-app border border-border-app text-text-title rounded-2xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent/20"
+              />
+              {exploreLoading && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+              )}
             </div>
-          ) : (
-            filteredContacts.map((contact) => {
-              const isSelected = selectedPartner?.id === contact.id
-              const isOnline = onlineUsers.includes(contact.id)
-              return (
-                <div
-                  key={contact.id}
-                  onClick={() => navigate(`/?chat=${contact.id}`)}
-                  className={`flex items-center gap-3.5 p-3.5 rounded-3xl cursor-pointer transition-all duration-150 relative ${isSelected
-                    ? 'bg-accent/8 dark:bg-accent/10 sidebar-item-active'
-                    : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                >
-                  <div className="relative flex-shrink-0">
-                    {contact.image ? (
-                      <img src={contact.image} alt={contact.username} className="w-12 h-12 rounded-full object-cover border-2 border-border-app shadow-sm" />
-                    ) : (
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base ${getAvatarBg(contact.id)}`}>
-                        {getInitials(contact.username)}
+
+            {exploreResults.length === 0 ? (
+              <div className="p-8 text-center text-xs text-gray-400 dark:text-gray-500 font-medium leading-relaxed">
+                {exploreQuery.trim() ? (
+                  exploreLoading ? 'Searching users...' : `No users found matching "@${exploreQuery}"`
+                ) : (
+                  'Type a username above to find and message users on ChatApp.'
+                )}
+              </div>
+            ) : (
+              exploreResults.map((user) => {
+                const isSelected = selectedPartner?.id === user.id
+                const isOnline = onlineUsers.includes(user.id)
+                return (
+                  <div
+                    key={user.id}
+                    onClick={() => {
+                      const existingPartner = partners.find((p) => p.id === user.id)
+                      if (!existingPartner) {
+                        setPartners((prev) => [user, ...prev])
+                      }
+                      setSelectedPartner(user)
+                      navigate(`/?chat=${user.id}`)
+                    }}
+                    className={`flex items-center justify-between p-3 rounded-3xl cursor-pointer transition-all duration-150 relative ${isSelected
+                      ? 'bg-accent/8 dark:bg-accent/10 sidebar-item-active'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                      }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="relative flex-shrink-0">
+                        {user.image ? (
+                          <img src={user.image} alt={user.username} className="w-10 h-10 rounded-full object-cover border border-border-app shadow-sm" />
+                        ) : (
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-xs ${getAvatarBg(user.id)}`}>
+                            {getInitials(user.name || user.username)}
+                          </div>
+                        )}
+                        {isOnline && (
+                          <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Online" />
+                        )}
                       </div>
-                    )}
-                    {!contact.isGroup && isOnline && (
-                      <span className="absolute bottom-0 right-0 block h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900" title="Online" />
-                    )}
+                      <div className="text-left min-w-0 flex-1">
+                        <span className="text-xs font-bold text-text-title truncate block">{user.name || user.username}</span>
+                        {user.username && <span className="text-[11px] text-gray-400 font-mono truncate block">@{user.username}</span>}
+                      </div>
+                    </div>
+
+                    <button
+                      className="px-3 py-1.5 bg-accent hover:bg-accent/90 text-white rounded-xl text-[11px] font-bold transition-colors cursor-pointer shrink-0"
+                    >
+                      Message
+                    </button>
                   </div>
-                  <div className="text-left flex-1 min-w-0">
-                    <span className={`text-sm font-bold truncate block ${isSelected ? 'text-accent' : 'text-text-title'}`}>{contact.username}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 truncate block mt-0.5">{contact.email}</span>
-                  </div>
-                </div>
-              )
-            })
-          )
+                )
+              })
+            )}
+          </div>
         ) : (
           /* Calls Sidebar List */
           <div>
@@ -2039,7 +2110,7 @@ return (
                     <img src={selectedPartner.image} alt={selectedPartner.username} className="w-11 h-11 rounded-full object-cover ring-2 ring-border-app" />
                   ) : (
                     <div className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-white text-base ${getAvatarBg(selectedPartner.id)}`}>
-                      {selectedPartner.isGroup ? '👥' : getInitials(selectedPartner.username)}
+                      {selectedPartner.isGroup ? '👥' : getInitials(selectedPartner.name || selectedPartner.username)}
                     </div>
                   )}
                   {!selectedPartner.isGroup && onlineUsers.includes(selectedPartner.id) && (
@@ -2048,8 +2119,13 @@ return (
                 </div>
 
                 <div className="text-left leading-tight flex-1 min-w-0">
-                  <h3 className="text-base font-bold text-text-title truncate flex items-center gap-1.5">
-                    <span>{selectedPartner.username}</span>
+                  <h3 className="text-base font-bold text-text-title truncate flex items-center gap-2">
+                    <span className="truncate">{selectedPartner.name || selectedPartner.username}</span>
+                    {!selectedPartner.isGroup && selectedPartner.username && (
+                      <span className="text-xs font-mono font-normal text-gray-400 shrink-0">
+                        @{selectedPartner.username}
+                      </span>
+                    )}
                     {isE2EEActive && !selectedPartner.isGroup && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300/40 select-none" title="End-to-End Encrypted (Web Crypto ECDH + AES-GCM-256)">
                         <svg className="w-3 h-3 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">

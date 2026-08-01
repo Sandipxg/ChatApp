@@ -4,8 +4,18 @@ const userSchema = new mongoose.Schema(
   {
     email: {
       type: String,
-      required: true,
+      required: false,
+      sparse: true,
+    },
+    phoneNumber: {
+      type: String,
       unique: true,
+      sparse: true,
+      trim: true,
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false,
     },
     emailVerified: {
       type: Boolean,
@@ -21,6 +31,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+      trim: true,
+      lowercase: true,
     },
     reminderTime: {
       type: String, // Format: "HH:MM", or null if notifications are disabled

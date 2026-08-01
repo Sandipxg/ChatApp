@@ -283,6 +283,30 @@ export async function fetchUserPublicKey(userId) {
   return data.publicKey
 }
 
+export async function searchUsersByUsername(query) {
+  if (!query || !query.trim()) return []
+  const res = await fetch(`${USER_API_URL}/search?q=${encodeURIComponent(query.trim())}`, { credentials: 'include' })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to search users')
+  }
+  return res.json()
+}
+
+export async function updateUsername(username) {
+  const res = await fetch(`${USER_API_URL}/username`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+    credentials: 'include',
+  })
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}))
+    throw new Error(errorData.error || 'Failed to update username')
+  }
+  return res.json()
+}
+
 
 
 

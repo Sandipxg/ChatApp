@@ -164,8 +164,14 @@ export function AuthProvider({ children }) {
     persistUser(updatedUser)
   }
 
+  function updateUserUsername(username) {
+    if (!currentUser) return
+    const updatedUser = { ...currentUser, username }
+    persistUser(updatedUser)
+  }
+
   return (
-    <AuthContext.Provider value={{ currentUser, loading, signup, login, logout, deleteAccount, updateReminderSettings, updateUserImage }}>
+    <AuthContext.Provider value={{ currentUser, loading, signup, login, logout, deleteAccount, updateReminderSettings, updateUserImage, updateUserUsername }}>
       {loading ? (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
           <div className="w-12 h-12 border-4 border-purple-200 dark:border-purple-900 border-t-purple-600 dark:border-t-purple-400 rounded-full animate-spin"></div>

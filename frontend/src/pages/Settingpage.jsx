@@ -2,6 +2,7 @@ import { useContext, useState, useEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import ThemeContext from "../context/ThemeContext"
 import { useAuth } from "../context/AuthContext"
+import { useInstall } from "../context/InstallContext"
 
 import {
   subscribeUserToPush,
@@ -9,7 +10,7 @@ import {
   getSubscriptionState,
   triggerTestPush
 } from "../services/pushService"
-import { useInstall } from "../context/InstallContext"
+import { updateUsername } from "../services/chatService"
 
 // Custom SVG Icons
 
@@ -113,10 +114,54 @@ function SettingsPage() {
     presetTheme, setPresetTheme
   } = useContext(ThemeContext)
 
-  const { currentUser, logout, deleteAccount, updateReminderSettings, updateUserImage } = useAuth()
+  const { currentUser, logout, deleteAccount, updateReminderSettings, updateUserImage, updateUserUsername } = useAuth()
   const { isInstallable, isInstalled, install } = useInstall()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Username update states
+  const [usernameInput, setUsernameInput] = useState(currentUser?.username || "")
+  const [usernameLoading, setUsernameLoading] = useState(false)
+  const [usernameError, setUsernameError] = useState("")
+  const [usernameSuccess, setUsernameSuccess] = useState("")
+
+  useEffect(() => {
+    if (currentUser?.username) {
+      setUsernameInput(currentUser.username)
+    }
+  }, [currentUser?.username])
+
+  async function handleSaveUsername(e) {
+    if (e) e.preventDefault()
+    setUsernameError("")
+    setUsernameSuccess("")
+
+    const cleanName = usernameInput.trim().toLowerCase().replace(/^@/, '')
+    if (!cleanName || cleanName.length < 3 || cleanName.length > 20) {
+      setUsernameError("Username must be between 3 and 20 characters long.")
+      return
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_]{3,20}$/
+    if (!usernameRegex.test(cleanName)) {
+      setUsernameError("Only letters, numbers, or underscores are allowed.")
+      return
+    }
+
+    setUsernameLoading(true)
+    try {
+      const data = await updateUsername(cleanName)
+      if (updateUserUsername) {
+        updateUserUsername(data.username)
+      }
+      setUsernameInput(data.username)
+      setUsernameSuccess("Username updated successfully!")
+    } catch (err) {
+      setUsernameError(err.message || "Failed to update username.")
+    } finally {
+      setUsernameLoading(false)
+    }
+  }
 
   const [activeTab, setActiveTab] = useState(() => {
     const initialParams = new URLSearchParams(window.location.search)
@@ -854,6 +899,39 @@ return (
                   {avatarSuccess}
                 </p>
               )}
+
+              {/* Username Input & Save Form */}
+              <div className="pt-4 border-t border-border-app/60 space-y-3">
+                <label className="block text-xs font-bold text-text-title uppercase tracking-wider">
+                  Unique Username
+                </label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 font-bold text-xs select-none">@</span>
+                    <input
+                      type="text"
+                      value={usernameInput}
+                      onChange={(e) => setUsernameInput(e.target.value)}
+                      placeholder="username"
+                      className="w-full pl-8 pr-4 py-2.5 bg-bg-app border border-border-app text-text-title rounded-2xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-accent/20"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSaveUsername}
+                    disabled={usernameLoading || !usernameInput.trim() || usernameInput.trim().toLowerCase() === (currentUser?.username || '').toLowerCase()}
+                    className="bg-accent hover:bg-accent/90 text-white font-extrabold px-5 py-2.5 rounded-2xl text-xs tracking-wider transition-all shadow-md shadow-accent/20 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  >
+                    {usernameLoading ? "Saving..." : "Save"}
+                  </button>
+                </div>
+
+                {usernameError && (
+                  <p className="text-red-500 text-xs font-semibold">{usernameError}</p>
+                )}
+                {usernameSuccess && (
+                  <p className="text-green-500 text-xs font-semibold">{usernameSuccess}</p>
+                )}
+              </div>
             </div>
 
               {/* System Health Check Section */}

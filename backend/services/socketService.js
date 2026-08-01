@@ -218,7 +218,10 @@ function isSocketRateLimited(socketId, maxCount = 15, windowMs = 2000) {
 
     // Handle user typing indicators
     socket.on('typing', async ({ receiverId }) => {
-      const isGroup = await Conversation.exists({ _id: receiverId, isGroup: true })
+      if (!receiverId) return
+      const isGroup = mongoose.Types.ObjectId.isValid(receiverId)
+        ? await Conversation.exists({ _id: receiverId, isGroup: true })
+        : false
       if (isGroup) {
         socket.to(receiverId).emit('typing', { senderId: userId, chatId: receiverId })
       } else {
@@ -227,7 +230,10 @@ function isSocketRateLimited(socketId, maxCount = 15, windowMs = 2000) {
     })
 
     socket.on('stop_typing', async ({ receiverId }) => {
-      const isGroup = await Conversation.exists({ _id: receiverId, isGroup: true })
+      if (!receiverId) return
+      const isGroup = mongoose.Types.ObjectId.isValid(receiverId)
+        ? await Conversation.exists({ _id: receiverId, isGroup: true })
+        : false
       if (isGroup) {
         socket.to(receiverId).emit('stop_typing', { senderId: userId, chatId: receiverId })
       } else {
@@ -310,8 +316,15 @@ function isSocketRateLimited(socketId, maxCount = 15, windowMs = 2000) {
           )
           io.to(chatId).emit('messages_read', { chatId, readerId: userId })
         } else {
+          const updateFilter = { receiverId: userId, status: { $ne: 'read' } }
+          if (mongoose.Types.ObjectId.isValid(chatId)) {
+            updateFilter.chatId = chatId
+          } else if (otherUserId) {
+            updateFilter.senderId = otherUserId
+          }
+
           await Message.updateMany(
-            { chatId, receiverId: userId, status: { $ne: 'read' } },
+            updateFilter,
             { $set: { status: 'read' } }
           )
           if (otherUserId) {
