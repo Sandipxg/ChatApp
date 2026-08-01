@@ -245,90 +245,85 @@ function AppLayout() {
       
       {/* ── 2. MAIN CONTENT VIEW WITH HEADER ── */}
       <div className="flex-1 flex flex-col min-w-0 relative h-full">
-        
-        {/* Global Dynamic Top Header */}
-        <header className={`h-[72px] bg-bg-card/90 border-b border-border-app flex-shrink-0 flex items-center justify-between px-6 z-30 select-none backdrop-blur-sm ${
-          hasActiveChat ? 'hidden md:flex' : 'flex'
-        }`}>
-          
-          {/* Left: Dynamic section title */}
-          <div className="flex items-center gap-3">
-            {renderHeaderTitle()}
-          </div>
-
-
-
-          {/* Right: Actions menu & Dropdown */}
-          <div className="flex items-center gap-4">
+         {/* Global Dynamic Top Header — Only shown on sub-pages like /settings */}
+        {!isChatPage && (
+          <header className="h-[60px] bg-bg-header border-b border-border-app flex-shrink-0 flex items-center justify-between px-6 z-30 select-none">
             
-
-
-            {/* Quick Settings */}
-            <button
-              onClick={() => navigate("/settings?tab=account")}
-              className="p-2 text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 rounded-xl transition-all cursor-pointer"
-              title="Settings"
-            >
-              <SettingsIcon className="w-5 h-5" />
-            </button>
-
-            {/* Profile Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-2xl hover:bg-bg-app/80 transition-all cursor-pointer select-none group"
-              >
-                {currentUser.image ? (
-                  <img src={currentUser.image} alt={currentUser.username} className="w-8 h-8 rounded-full object-cover shadow-md ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-accent/20 ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all">
-                    {firstLetter}
-                  </div>
-                )}
-                <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Profile Dropdown Menu */}
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2.5 w-52 bg-bg-card border border-border-app rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 z-50 animate-fade-up text-left overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border-app flex items-center gap-3">
-                    {currentUser.image ? (
-                      <img src={currentUser.image} alt={currentUser.username} className="w-9 h-9 rounded-full object-cover shadow-md flex-shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-accent/20 flex-shrink-0">
-                        {firstLetter}
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-text-title truncate">{currentUser.username}</p>
-                      <p className="text-[10px] text-text-body opacity-60 font-medium truncate mt-0.5">{currentUser.email || 'Logged in'}</p>
-                    </div>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      onClick={() => { setShowUserMenu(false); navigate("/settings?tab=account") }}
-                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-text-body hover:bg-bg-app hover:text-text-title cursor-pointer transition-colors"
-                    >
-                      <SettingsIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <span>Settings</span>
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer transition-colors"
-                    >
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-                      </svg>
-                      <span>Log out</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+            {/* Left: Dynamic section title */}
+            <div className="flex items-center gap-3">
+              {renderHeaderTitle()}
             </div>
 
-          </div>
+            {/* Right: Actions menu & Dropdown */}
+            <div className="flex items-center gap-4">
+              
+              {/* Quick Settings */}
+              <button
+                onClick={() => navigate("/settings?tab=account")}
+                className="p-2 text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 rounded-xl transition-all cursor-pointer"
+                title="Settings"
+              >
+                <SettingsIcon className="w-5 h-5" />
+              </button>
 
-        </header>
+              {/* Profile Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-2xl hover:bg-bg-app/80 transition-all cursor-pointer select-none group"
+                >
+                  {currentUser.image ? (
+                    <img src={currentUser.image} alt={currentUser.username} className="w-8 h-8 rounded-full object-cover shadow-md ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-accent/20 ring-2 ring-white dark:ring-gray-900 group-hover:ring-accent/30 transition-all">
+                      {firstLetter}
+                    </div>
+                  )}
+                  <ChevronDownIcon className={`w-3.5 h-3.5 text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Profile Dropdown Menu */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2.5 w-52 bg-bg-card border border-border-app rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 z-50 animate-fade-up text-left overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border-app flex items-center gap-3">
+                      {currentUser.image ? (
+                        <img src={currentUser.image} alt={currentUser.username} className="w-9 h-9 rounded-full object-cover shadow-md flex-shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-accent to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-accent/20 flex-shrink-0">
+                          {firstLetter}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-text-title truncate">{currentUser.username}</p>
+                        <p className="text-[10px] text-text-body opacity-60 font-medium truncate mt-0.5">{currentUser.email || 'Logged in'}</p>
+                      </div>
+                    </div>
+                    <div className="py-1">
+                      <button
+                        onClick={() => { setShowUserMenu(false); navigate("/settings?tab=account") }}
+                        className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-text-body hover:bg-bg-app hover:text-text-title cursor-pointer transition-colors"
+                      >
+                        <SettingsIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        <span>Settings</span>
+                      </button>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer transition-colors"
+                      >
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
+                        </svg>
+                        <span>Log out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+          </header>
+        )}
 
         {showOfflineBanner && (
           <div className="bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 px-6 py-2 flex items-center justify-between z-20 text-xs font-semibold animate-fade-down backdrop-blur-sm transition-all duration-300 select-none text-left flex-shrink-0">

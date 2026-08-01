@@ -1729,24 +1729,53 @@ return (
   <div className="flex h-full w-full bg-white dark:bg-gray-950 overflow-hidden font-sans">
 
     {/* ── 1. SIDEBAR COLUMN: CHATS & FILTER LIST ── */}
-    <div className={`w-full md:w-[320px] flex-shrink-0 flex flex-col bg-bg-sidebar border-r border-border-app transition-all h-full ${selectedPartner ? 'hidden md:flex' : 'flex'
+    <div className={`w-full md:w-[360px] lg:w-[380px] flex-shrink-0 flex flex-col bg-bg-sidebar border-r border-border-app transition-all h-full ${selectedPartner ? 'hidden md:flex' : 'flex'
       }`}>
 
-      {/* Chats title row + search */}
-      <div className="px-4 pt-5 pb-3 space-y-3 select-none">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-extrabold text-text-title tracking-tight">Messages</h2>
+      {/* Sidebar Header in WhatsApp style (60px header) */}
+      <div className="h-[60px] px-4 bg-bg-header border-b border-border-app flex items-center justify-between select-none shrink-0">
+        <div className="flex items-center gap-3">
+          <div
+            onClick={() => navigate('/settings')}
+            className="cursor-pointer hover:opacity-85 transition-opacity"
+            title="Open Settings"
+          >
+            {currentUser?.image ? (
+              <img src={currentUser.image} alt={currentUser.username} className="w-10 h-10 rounded-full object-cover ring-2 ring-border-app" />
+            ) : (
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-xs ${getAvatarBg(currentUser?.id || 'me')}`}>
+                {getInitials(currentUser?.name || currentUser?.username || 'U')}
+              </div>
+            )}
+          </div>
+          <h2 className="text-xl font-extrabold text-text-title tracking-tight">Chats</h2>
+        </div>
+
+        <div className="flex items-center gap-1">
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-accent text-white rounded-full hover:bg-accent-hover active:scale-95 shadow-md shadow-accent/25 transition-all cursor-pointer"
+            className="p-2.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
             title="Create New Group"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
-            <span>New Group</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/settings')}
+            className="p-2.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
+            title="Settings"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 1-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0m-9.75 0h9.75" />
+            </svg>
           </button>
         </div>
+      </div>
+
+      {/* WhatsApp style Search Bar container */}
+      <div className="p-3 select-none border-b border-border-app bg-bg-sidebar">
         <div className="relative">
           <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
@@ -1755,44 +1784,42 @@ return (
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search conversations..."
-            className="w-full pl-10 pr-4 py-3 bg-bg-app border border-border-app rounded-full text-sm text-text-body placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/40 focus:bg-bg-card transition-all select-text"
+            placeholder="Search or start new chat"
+            className="w-full pl-10 pr-4 py-2 bg-bg-header border border-border-app rounded-xl text-xs text-text-title placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-accent focus:bg-bg-card transition-all select-text font-medium"
           />
         </div>
       </div>
 
-
-
-      {/* Sidebar Sections Tab bar */}
-      <div className="px-4 flex items-center gap-1 select-none border-b border-gray-100 dark:border-gray-800/80 mb-2">
+      {/* Sidebar Sections Tab bar — 100% full width, 3 equal columns, taller height */}
+      <div className="w-full grid grid-cols-3 select-none border-b border-border-app bg-bg-sidebar">
         <button
           onClick={() => setActiveTab('chats')}
-          className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm ${activeTab === 'chats'
+          className={`h-12 flex items-center justify-center cursor-pointer font-bold transition-all text-sm relative ${activeTab === 'chats'
             ? 'text-accent border-b-2 border-accent'
             : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
         >
-          Partners
+          <span>Chats</span>
         </button>
         <button
           onClick={() => setActiveTab('explore')}
-          className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm ${activeTab === 'explore'
+          className={`h-12 flex items-center justify-center cursor-pointer font-bold transition-all text-sm relative ${activeTab === 'explore'
             ? 'text-accent border-b-2 border-accent'
             : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
         >
-          Explore
+          <span>Explore</span>
         </button>
         <button
           onClick={() => setActiveTab('calls')}
-          className={`pb-3 px-2 relative cursor-pointer font-bold transition-all text-sm flex items-center gap-1.5 ${activeTab === 'calls'
+          className={`h-12 flex items-center justify-center gap-1.5 cursor-pointer font-bold transition-all text-sm relative ${activeTab === 'calls'
             ? 'text-accent border-b-2 border-accent'
             : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}
         >
           <span>Calls</span>
           {callLogs?.length > 0 && (
-            <span className="px-1.5 py-0.2 text-[10px] rounded-full bg-accent/15 text-accent font-extrabold">
+            <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-accent/15 text-accent font-extrabold">
               {callLogs.length}
             </span>
           )}
@@ -1843,50 +1870,55 @@ return (
                   </div>
 
                   <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between gap-1">
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <span className={`text-sm font-bold truncate max-w-[130px] ${isSelected ? 'text-accent' : 'text-text-title'}`}>
-                          {partner.name || partner.username}
-                        </span>
-                        {!partner.isGroup && partner.username && (
-                          <span className="text-[11px] text-gray-400 font-mono font-normal truncate max-w-[85px] shrink-0">
-                            @{partner.username}
-                          </span>
-                        )}
-                      </div>
+                    {/* Line 1: Full Name on Left, Timestamp on Right */}
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-sm font-bold truncate flex-1 min-w-0 ${isSelected ? 'text-accent' : 'text-text-title'}`}>
+                        {partner.name || partner.username}
+                      </span>
                       {partner.latestMessage && (
-                        <span className="text-[11px] text-gray-400 font-medium select-none flex-shrink-0 ml-1">
+                        <span className="text-[11px] text-gray-400 font-medium select-none shrink-0 ml-auto">
                           {partner.latestMessage.createdAt.includes('T') ? formatTime(partner.latestMessage.createdAt) : partner.latestMessage.createdAt}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className={`text-xs truncate max-w-[160px] ${partner.unreadCount > 0 ? 'text-gray-700 dark:text-gray-200 font-semibold' : 'text-gray-400 dark:text-gray-500'
-                        }`}>
-                        {isTyping ? (
-                          <span className="text-accent font-bold">typing...</span>
-                        ) : partner.latestMessage ? (
-                          partner.latestMessage.decryptedText ? (
-                            <span className="flex items-center gap-1 truncate">
-                              <svg className="w-3 h-3 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                              </svg>
-                              <span className="truncate">{partner.latestMessage.decryptedText}</span>
-                            </span>
-                          ) : (partner.latestMessage.isEncrypted || partner.latestMessage.iv) ? (
-                            <span className="italic opacity-85 flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-                              </svg>
-                              <span>Encrypted message</span>
-                            </span>
-                          ) : (
-                            partner.latestMessage.text
-                          )
-                        ) : (
-                          'Start a conversation'
+
+                    {/* Line 2: @username handle + message snippet on Left, Unread badge on Right */}
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      <div className="flex items-center gap-1.5 min-w-0 flex-1 text-xs text-gray-400 dark:text-gray-500">
+                        {!partner.isGroup && partner.username && partner.name && partner.name !== partner.username && (
+                          <span className="text-[11px] text-gray-400 font-mono font-normal shrink-0">
+                            @{partner.username}
+                          </span>
                         )}
-                      </p>
+                        {!partner.isGroup && partner.username && partner.name && partner.name !== partner.username && (
+                          <span className="text-[10px] text-gray-400 shrink-0">•</span>
+                        )}
+                        <p className={`truncate flex-1 ${partner.unreadCount > 0 ? 'text-text-title font-semibold' : ''}`}>
+                          {isTyping ? (
+                            <span className="text-accent font-bold">typing...</span>
+                          ) : partner.latestMessage ? (
+                            partner.latestMessage.decryptedText ? (
+                              <span className="flex items-center gap-1 truncate">
+                                <svg className="w-3 h-3 text-emerald-500 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                </svg>
+                                <span className="truncate">{partner.latestMessage.decryptedText}</span>
+                              </span>
+                            ) : (partner.latestMessage.isEncrypted || partner.latestMessage.iv) ? (
+                              <span className="italic opacity-85 flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                                <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                </svg>
+                                <span>Encrypted message</span>
+                              </span>
+                            ) : (
+                              partner.latestMessage.text
+                            )
+                          ) : (
+                            'Start a conversation'
+                          )}
+                        </p>
+                      </div>
                       {partner.unreadCount > 0 && (
                         <span className="flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-[10px] font-extrabold text-white flex items-center justify-center shadow-sm select-none">
                           {partner.unreadCount}
@@ -2080,9 +2112,9 @@ return (
       {selectedPartner ? (
         // ACTIVE CONVERSATION WINDOW
         <>
-          {/* Chat Window Header — glassmorphic */}
-          <div className="h-[72px] px-6 glass border-b border-border-app flex items-center flex-shrink-0 select-none z-10">
-            <div className="flex items-center gap-4 w-full">
+          {/* Chat Window Header — WhatsApp style (60px) */}
+          <div className="h-[60px] px-4 bg-bg-header border-b border-border-app flex items-center flex-shrink-0 select-none z-10">
+            <div className="flex items-center gap-3 w-full">
               {/* Back link on Mobile */}
               <button
                 onClick={() => navigate('/')}
@@ -2330,7 +2362,7 @@ return (
             )
           })()}
 
-          {/* MESSAGE FEED PANE (Wallpaper Applied) */}
+          {/* MESSAGE FEED PANE (WhatsApp Wallpaper Applied) */}
           <div
             onDragOver={(e) => {
               e.preventDefault()
@@ -2338,8 +2370,15 @@ return (
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin wallpaper-${chatWallpaper} relative`}
+            className={`flex-1 overflow-y-auto px-4 py-3 space-y-3 scrollbar-thin wa-chat-pattern relative`}
           >
+            {/* WhatsApp Yellow Security Encryption Notice Banner */}
+            <div className="mx-auto my-2 px-3.5 py-1.5 bg-[#ffe299]/30 dark:bg-[#182229] border border-[#ffe299]/40 dark:border-[#222d34] rounded-xl text-center max-w-[85%] text-[11px] text-[#54656f] dark:text-[#8696a0] select-none flex items-center justify-center gap-1.5 shadow-2xs font-medium">
+              <svg className="w-3.5 h-3.5 text-[#e5a600] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+              <span>Messages and calls are end-to-end encrypted. No one outside of this chat can read or listen to them.</span>
+            </div>
             {isDragging && (
               <div className="absolute inset-0 bg-accent/10 border-4 border-dashed border-accent m-4 rounded-2xl flex flex-col items-center justify-center backdrop-blur-xs z-30 pointer-events-none animate-pulse">
                 <div className="bg-bg-card p-6 rounded-2xl shadow-xl border border-border-app flex flex-col items-center gap-3">
@@ -2439,17 +2478,14 @@ return (
                       onTouchStart={(e) => handleTouchStart(e, msg)}
                       onTouchEnd={handleTouchCancel}
                       onTouchMove={handleTouchCancel}
-                      className={`rounded-2xl px-4 pt-2.5 pb-2 leading-relaxed text-sm relative max-w-full group ${isOwnMessage
+                      className={`rounded-xl px-3.5 pt-2 pb-2.5 leading-relaxed text-sm relative max-w-full group shadow-2xs ${isOwnMessage
                         ? (msg.isEdited ? 'min-w-[130px]' : 'min-w-[90px]')
                         : (msg.isEdited ? 'min-w-[110px]' : 'min-w-[75px]')
-                        } group ${isOwnMessage
-                          ? 'bg-emerald-600 dark:bg-emerald-700 text-white bubble-own'
-                          : 'bg-bg-card text-text-body border border-border-app shadow-sm'
-                        } ${isConsecutivePrev
-                          ? (isOwnMessage ? 'rounded-tr-md' : 'rounded-tl-md')
-                          : (isOwnMessage ? 'rounded-tr-none' : 'rounded-tl-none')
+                        } ${isOwnMessage
+                          ? 'bg-[var(--wa-sent-bubble)] text-[var(--wa-sent-text)] rounded-tr-xs'
+                          : 'bg-[var(--wa-received-bubble)] text-[var(--wa-received-text)] border border-border-app rounded-tl-xs'
                         } ${isMessagePinned
-                          ? (isOwnMessage ? 'ring-2 ring-white/35 shadow-md bg-emerald-650 dark:bg-emerald-750' : 'border-accent/40 bg-accent/4 dark:bg-accent/8 ring-2 ring-accent/15 shadow-sm')
+                          ? (isOwnMessage ? 'ring-2 ring-emerald-500/40 shadow-sm' : 'border-accent/40 bg-accent/4 dark:bg-accent/8 ring-2 ring-accent/15 shadow-sm')
                           : ''
                         }`}>
                       {/* Hover Action Menu */}
@@ -2690,7 +2726,7 @@ return (
                                 </svg>
                               </div>
                             ) : (
-                              <div className="flex -space-x-1.5 items-center text-sky-350">
+                              <div className="flex -space-x-1.5 items-center text-[#53bdeb]">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                 </svg>
@@ -2750,8 +2786,8 @@ return (
             <div ref={messagesEndRef} />
           </div>
 
-          {/* MESSAGE INPUT CONTAINER — floating pill */}
-          <div className="px-4 py-4 md:px-6 bg-bg-card/90 border-t border-border-app flex-shrink-0 select-none z-10 backdrop-blur-sm">
+          {/* MESSAGE INPUT CONTAINER — WhatsApp Web bar */}
+          <div className="px-4 py-2.5 bg-bg-header border-t border-border-app flex-shrink-0 select-none z-10">
             {editingMessage && (
               <div className="flex items-center justify-between bg-accent/8 dark:bg-accent/12 px-4 py-2 rounded-2xl mb-3 text-xs text-text-title animate-fade-in border border-accent/20">
                 <div className="flex items-center gap-2 truncate">
@@ -2809,11 +2845,11 @@ return (
             })()}
             <form
               onSubmit={(e) => { e.preventDefault(); handleSend() }}
-              className="flex items-center gap-3 w-full"
+              className="flex items-center gap-2.5 w-full"
             >
               {isRecording ? (
-                <div className="flex-1 flex items-center justify-between bg-bg-app border border-border-app rounded-full px-6 py-3 transition-all animate-pulse duration-1000">
-                  <div className="flex items-center gap-2.5 text-sm font-semibold text-red-500">
+                <div className="flex-1 flex items-center justify-between bg-white dark:bg-[#2a3942] border border-border-app rounded-xl px-5 py-2.5 transition-all animate-pulse duration-1000">
+                  <div className="flex items-center gap-2.5 text-xs font-semibold text-red-500">
                     <span className="relative flex h-2.5 w-2.5 shrink-0">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
@@ -2838,10 +2874,10 @@ return (
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-3.5 rounded-full text-gray-400 hover:text-accent hover:bg-accent/8 dark:hover:bg-accent/10 transition-all cursor-pointer flex-shrink-0 bg-bg-app border border-border-app"
+                    className="p-2.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer flex-shrink-0"
                     title="Attach Image or Video"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 002.112 2.13" />
                     </svg>
                   </button>
@@ -2857,15 +2893,15 @@ return (
                     className="hidden"
                   />
 
-                  {/* Input block */}
+                  {/* WhatsApp style Input block */}
                   <input
                     type="text"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
-                    placeholder="Type a message..."
-                    className="flex-1 bg-bg-app border border-border-app focus:bg-bg-card focus:outline-none focus:ring-2 focus:ring-accent/20 text-sm text-text-title placeholder-gray-400 dark:placeholder-gray-500 rounded-full px-6 py-3.5 transition-all select-text"
+                    placeholder="Type a message"
+                    className="flex-1 bg-white dark:bg-[#2a3942] border-0 focus:outline-none text-xs sm:text-sm text-text-title placeholder-gray-400 dark:placeholder-gray-500 rounded-xl px-4 py-2.5 transition-all select-text font-normal"
                   />
                 </>
               )}

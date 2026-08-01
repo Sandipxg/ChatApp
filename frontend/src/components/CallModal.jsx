@@ -88,13 +88,13 @@ export default function CallModal() {
 
       {/* --- FLOATING TOP HEADER --- */}
       <div className="absolute top-4 left-4 right-4 md:top-6 md:left-6 md:right-6 z-40 flex items-center justify-between pointer-events-none">
-        <div className="pointer-events-auto flex items-center gap-3 bg-slate-900/80 backdrop-blur-xl border border-white/10 px-4 py-2.5 rounded-full shadow-2xl">
+        <div className="pointer-events-auto flex items-center gap-3 bg-[#111b21]/90 backdrop-blur-xl border border-white/10 px-4 py-2.5 rounded-full shadow-2xl">
           <div className="relative">
             {partner?.image ? (
               <img src={partner.image} alt={partner.username} className="w-9 h-9 rounded-full object-cover ring-2 ring-white/20" />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-sm ring-2 ring-white/20">
-                {getInitials(partner?.username)}
+              <div className={`w-9 h-9 rounded-full text-white flex items-center justify-center font-bold text-sm ring-2 ring-white/20 ${getAvatarBg(partner?.id || 'p')}`}>
+                {getInitials(partner?.name || partner?.username)}
               </div>
             )}
             {/* Peer Muted Mic Red Badge on Avatar */}
@@ -109,7 +109,7 @@ export default function CallModal() {
           </div>
           <div className="text-left pr-2">
             <div className="flex items-center gap-2">
-              <p className="font-bold text-sm tracking-wide leading-tight truncate max-w-[140px] sm:max-w-[220px]">{partner?.username || 'User'}</p>
+              <p className="font-bold text-sm tracking-wide leading-tight truncate max-w-[140px] sm:max-w-[220px]">{partner?.name || partner?.username || 'User'}</p>
               {peerIsMuted && callStatus === 'active' && (
                 <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[9px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
@@ -117,14 +117,17 @@ export default function CallModal() {
                 </span>
               )}
             </div>
-            <p className="text-[10px] text-slate-300 font-semibold tracking-wider uppercase">
-              {callStatus === 'active' ? (isScreenActive ? 'Screen Sharing' : (callType === 'video' ? 'Video Call' : 'Voice Call')) : callStatus}
+            <p className="text-[10px] text-emerald-400 font-semibold tracking-wider uppercase flex items-center gap-1">
+              <svg className="w-3 h-3 text-emerald-400 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+              <span>{callStatus === 'active' ? (isScreenActive ? 'Screen Sharing' : (callType === 'video' ? 'Video Call' : 'Voice Call')) : callStatus}</span>
             </p>
           </div>
         </div>
 
         {callStatus === 'active' && (
-          <div className="pointer-events-auto bg-slate-900/80 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full text-xs font-mono tracking-widest text-emerald-400 shadow-2xl flex items-center gap-2">
+          <div className="pointer-events-auto bg-[#111b21]/90 backdrop-blur-xl border border-white/10 px-4 py-2 rounded-full text-xs font-mono tracking-widest text-emerald-400 shadow-2xl flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span>{formatTimer(callDuration)}</span>
           </div>

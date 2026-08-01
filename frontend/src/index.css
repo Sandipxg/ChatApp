@@ -3,33 +3,65 @@
 
 @theme {
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --color-accent: var(--accent-color, #6366f1);
-  --color-accent-hover: var(--accent-color-hover, #4f46e5);
+  --color-accent: var(--accent-color, #008069);
+  --color-accent-hover: var(--accent-color-hover, #006e5a);
   
-  --color-bg-app: var(--bg-app, #f8f9fc);
+  --color-bg-app: var(--bg-app, #efeae2);
   --color-bg-card: var(--bg-card, #ffffff);
   --color-bg-sidebar: var(--bg-sidebar, #ffffff);
-  --color-border-app: var(--border-app, rgba(0, 0, 0, 0.08));
-  --color-text-title: var(--text-title, #111827);
-  --color-text-body: var(--text-body, #374151);
+  --color-bg-header: var(--bg-header, #f0f2f5);
+  --color-border-app: var(--border-app, #e9edef);
+  --color-text-title: var(--text-title, #111b21);
+  --color-text-body: var(--text-body, #3b4a54);
 }
 
 :root {
-  --bg-app: #f8f9fc;
+  --bg-app: #efeae2;
   --bg-card: #ffffff;
   --bg-sidebar: #ffffff;
-  --border-app: rgba(0, 0, 0, 0.08);
-  --text-title: #111827;
-  --text-body: #374151;
+  --bg-header: #f0f2f5;
+  --border-app: #e9edef;
+  --text-title: #111b21;
+  --text-body: #3b4a54;
+  --accent-color: #008069;
+  --accent-color-hover: #006e5a;
+  --wa-sent-bubble: #d9fdd3;
+  --wa-sent-text: #111b21;
+  --wa-received-bubble: #ffffff;
+  --wa-received-text: #111b21;
 }
 
 .dark {
-  --bg-app: #0d1117;
-  --bg-card: #161b22;
-  --bg-sidebar: #161b22;
-  --border-app: rgba(255, 255, 255, 0.08);
-  --text-title: #f0f6fc;
-  --text-body: #c9d1d9;
+  --bg-app: #0b141a;
+  --bg-card: #111b21;
+  --bg-sidebar: #111b21;
+  --bg-header: #202c33;
+  --border-app: #222d34;
+  --text-title: #e9edef;
+  --text-body: #8696a0;
+  --accent-color: #00a884;
+  --accent-color-hover: #008f70;
+  --wa-sent-bubble: #005c4b;
+  --wa-sent-text: #e9edef;
+  --wa-received-bubble: #202c33;
+  --wa-received-text: #e9edef;
+}
+
+/* WhatsApp Doodle Wallpaper Overlay */
+.wa-chat-pattern {
+  background-color: var(--bg-app);
+  background-image: url('/whatsapp-doodle-bg.png');
+  background-repeat: repeat;
+  background-size: 420px auto;
+  opacity: 0.96;
+}
+
+.dark .wa-chat-pattern {
+  background-color: #0b141a;
+  background-image: url('/whatsapp-doodle-bg.png');
+  background-repeat: repeat;
+  background-size: 420px auto;
+  opacity: 0.95;
 }
 
 /* ══════════════════════════════════════════════

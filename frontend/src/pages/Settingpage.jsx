@@ -422,57 +422,97 @@ const handleBackToMenu = () => {
 }
 
 return (
-  <div className="h-full w-full bg-bg-app overflow-hidden font-sans select-none flex flex-col md:flex-row">
-
-    {/* ── 1. SETTINGS CATEGORIES SIDEBAR ── */}
-    <aside className={`w-full md:w-[220px] flex-shrink-0 border-r border-border-app flex flex-col justify-between py-5 bg-bg-sidebar select-none ${activeTab ? 'hidden md:flex' : 'flex'
-      }`}>
-      <div className="flex flex-col gap-0.5 px-3">
-
+  <div className="h-full w-full bg-bg-app overflow-hidden font-sans select-none flex flex-col">
+    {/* ── 0. WHATSAPP STYLE TOP HEADER (60px) ── */}
+    <div className="h-[60px] px-4 md:px-6 bg-bg-header border-b border-border-app flex items-center justify-between flex-shrink-0 select-none z-10">
+      <div className="flex items-center gap-3">
         <button
-          onClick={() => handleTabClick("account")}
-          className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${activeTab === "account"
-            ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
-            : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-app"
-            }`}
+          onClick={() => navigate('/')}
+          className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer"
+          title="Back to Chats"
         >
-          <LockIcon className="w-5 h-5 flex-shrink-0" />
-          <span>Account</span>
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
         </button>
-
-        <button
-          onClick={() => handleTabClick("notifications")}
-          className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${activeTab === "notifications"
-            ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
-            : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-app"
-            }`}
-        >
-          <BellIcon className="w-5 h-5 flex-shrink-0" />
-          <span>Notifications</span>
-        </button>
-
-        <button
-          onClick={() => handleTabClick("appearance")}
-          className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold transition-all cursor-pointer relative ${activeTab === "appearance"
-            ? "bg-accent/8 dark:bg-accent/12 text-accent sidebar-item-active"
-            : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-app"
-            }`}
-        >
-          <PaintIcon className="w-5 h-5 flex-shrink-0" />
-          <span>Appearance</span>
-        </button>
+        <h2 className="text-lg font-extrabold text-text-title tracking-tight">Settings</h2>
       </div>
+    </div>
 
-      <div className="px-3">
-        <button
-          onClick={handleLogoutClick}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer"
-        >
-          <LogoutIcon className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <span>Log out</span>
-        </button>
-      </div>
-    </aside>
+    <div className="flex-1 flex overflow-hidden flex-col md:flex-row">
+      {/* ── 1. SETTINGS CATEGORIES SIDEBAR (WhatsApp Style Profile + Menu) ── */}
+      <aside className={`w-full md:w-[280px] flex-shrink-0 border-r border-border-app flex flex-col justify-between p-4 bg-bg-sidebar select-none ${activeTab ? 'hidden md:flex' : 'flex'
+        }`}>
+        <div className="space-y-4">
+          {/* User Profile Card */}
+          <div className="p-3 bg-bg-header/50 border border-border-app rounded-2xl flex items-center gap-3">
+            <div className="relative">
+              {currentUser?.image ? (
+                <img src={currentUser.image} alt={currentUser.username} className="w-12 h-12 rounded-full object-cover ring-2 ring-border-app" />
+              ) : (
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-white text-base shadow-sm ${getAvatarBg(currentUser?.id || 'me')}`}>
+                  {getInitials(currentUser?.name || currentUser?.username || 'U')}
+                </div>
+              )}
+            </div>
+            <div className="min-w-0 text-left flex-1">
+              <h3 className="text-sm font-bold text-text-title truncate">{currentUser?.name || currentUser?.username}</h3>
+              {currentUser?.username && (
+                <p className="text-[11px] text-gray-400 font-mono truncate">@{currentUser.username}</p>
+              )}
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Google Verified</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => handleTabClick("account")}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${activeTab === "account"
+                ? "bg-accent text-white shadow-sm"
+                : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-header"
+                }`}
+            >
+              <LockIcon className="w-4.5 h-4.5 flex-shrink-0" />
+              <span>Account & Handle</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick("appearance")}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${activeTab === "appearance"
+                ? "bg-accent text-white shadow-sm"
+                : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-header"
+                }`}
+            >
+              <PaintIcon className="w-4.5 h-4.5 flex-shrink-0" />
+              <span>Chats & Appearance</span>
+            </button>
+
+            <button
+              onClick={() => handleTabClick("notifications")}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${activeTab === "notifications"
+                ? "bg-accent text-white shadow-sm"
+                : "text-text-body opacity-80 hover:text-text-title hover:bg-bg-header"
+                }`}
+            >
+              <BellIcon className="w-4.5 h-4.5 flex-shrink-0" />
+              <span>Notifications</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="pt-4">
+          <button
+            onClick={handleLogoutClick}
+            className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all cursor-pointer border border-red-200/50 dark:border-red-900/30"
+          >
+            <LogoutIcon className="w-4 h-4 text-red-500 flex-shrink-0" />
+            <span>Log out</span>
+          </button>
+        </div>
+      </aside>
 
     {/* ── 2. SETTINGS CONTENT PANEL ── */}
     <main className={`flex-1 overflow-y-auto p-6 md:p-8 bg-bg-app select-text ${activeTab ? 'flex flex-col' : 'hidden md:flex'
@@ -1017,7 +1057,7 @@ return (
 
       </div>
     </main>
-
+    </div>
   </div>
   )
 }
