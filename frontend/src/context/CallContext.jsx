@@ -66,6 +66,7 @@ export function CallProvider({ children }) {
   const audioContextRef = useRef(null)
   const ringtoneIntervalRef = useRef(null)
   const pendingCandidatesRef = useRef([])
+  const incomingOfferRef = useRef(null)
 
   // Tracking call session info for logging
   const currentCallInfoRef = useRef(null) // { partner, type, direction }
@@ -235,6 +236,7 @@ export function CallProvider({ children }) {
       }
 
       // Store offer globally in ref to use when accepted
+      incomingOfferRef.current = offer
       socket.incomingOffer = offer
 
       // Start ringing sound
@@ -421,7 +423,10 @@ export function CallProvider({ children }) {
       const pc = createPeerConnection(partner.id, stream)
 
       // Set the incoming Offer
-      const offer = socket.incomingOffer
+      const offer = incomingOfferRef.current || socket?.incomingOffer
+      if (!offer) {
+        throw new Error('Incoming call offer is missing or expired.')
+      }
       await pc.setRemoteDescription(new RTCSessionDescription(offer))
 
       // Create Answer SDP
