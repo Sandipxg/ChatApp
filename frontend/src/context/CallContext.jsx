@@ -104,6 +104,15 @@ export function CallProvider({ children }) {
       timestamp: new Date().toISOString()
     }
 
+    if (socket && callPartner?.id) {
+      socket.emit('log_call_summary', {
+        to: callPartner.id,
+        callType: type || 'voice',
+        status: durationStr === 'Missed' ? 'missed' : (durationStr === 'No Answer' ? 'declined' : 'completed'),
+        duration: durationStr
+      })
+    }
+
     setCallLogs((prev) => [logEntry, ...prev.slice(0, 49)])
     currentCallInfoRef.current = null
     callStartTimeRef.current = null

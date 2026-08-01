@@ -24,8 +24,13 @@ const messageSchema = new mongoose.Schema(
     },
     messageType: {
       type: String,
-      enum: ['text', 'image', 'video', 'audio', 'file', 'system'],
+      enum: ['text', 'image', 'video', 'audio', 'file', 'system', 'call_log'],
       default: 'text',
+    },
+    callInfo: {
+      callType: { type: String, default: 'voice' },
+      status: { type: String, default: 'completed' },
+      duration: { type: String, default: '00:00' }
     },
     isEncrypted: {
       type: Boolean,

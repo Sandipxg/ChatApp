@@ -2523,6 +2523,43 @@ return (
                           </svg>
                           <span>This message was deleted</span>
                         </p>
+                      ) : msg.messageType === 'call_log' ? (
+                        <div className="p-3 bg-[#202c33] border border-white/5 rounded-2xl min-w-[220px] sm:min-w-[260px] text-left flex items-center justify-between gap-3 shadow-md select-none my-0.5">
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                              msg.callInfo?.status === 'missed' || msg.callInfo?.status === 'declined'
+                                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                : 'bg-white/10 text-white border border-white/10'
+                            }`}>
+                              {msg.callInfo?.callType === 'video' ? (
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+                                </svg>
+                              ) : (
+                                <svg className={`w-5 h-5 ${msg.callInfo?.status === 'missed' ? 'rotate-[135deg] text-rose-400' : 'text-white'}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-2.824-1.47-5.112-3.758-6.58-6.58l1.293-.97c.362-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25z" />
+                                </svg>
+                              )}
+                            </div>
+
+                            <div className="min-w-0 flex-1 pr-10">
+                              <p className="text-sm font-bold text-white truncate leading-snug">
+                                {msg.callInfo?.callType === 'video' ? 'Video call' : 'Voice call'}
+                              </p>
+                              <p className={`text-xs truncate ${
+                                msg.callInfo?.status === 'missed' || msg.callInfo?.status === 'declined'
+                                  ? 'text-rose-400 font-semibold'
+                                  : 'text-gray-300'
+                              }`}>
+                                {msg.callInfo?.status === 'missed'
+                                  ? 'Missed call'
+                                  : msg.callInfo?.status === 'declined'
+                                    ? 'Declined call'
+                                    : (msg.callInfo?.duration && msg.callInfo.duration !== 'Missed' ? `Duration ${msg.callInfo.duration}` : 'Call ended')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
                         <>
                           {/* Reply Preview Card */}

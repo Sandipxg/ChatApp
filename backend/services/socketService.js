@@ -578,6 +578,59 @@ function isSocketRateLimited(socketId, maxCount = 15, windowMs = 2000) {
       })
     })
 
+    socket.on('log_call_summary', async ({ to, callType, status, duration }) => {
+      if (!to) return
+      try {
+        const sortedIds = [userId, to].sort()
+        const chatId = sortedIds.join('_')
+
+        let conversation = await Conversation.findOne({
+          $or: [
+            { _id: chatId },
+            { isGroup: false, 'members.userId': { $all: [userId, to] } }
+          ]
+        })
+
+        if (!conversation) {
+          conversation = await Conversation.create({
+            _id: chatId,
+            isGroup: false,
+            members: [
+              { userId, role: 'member' },
+              { userId: to, role: 'member' }
+            ]
+          })
+        }
+
+        const actualChatId = conversation._id.toString()
+        const messageText = callType === 'video' ? 'Video call' : 'Voice call'
+
+        const messageDoc = new Message({
+          chatId: actualChatId,
+          senderId: userId,
+          receiverId: to,
+          text: messageText,
+          messageType: 'call_log',
+          callInfo: {
+            callType: callType || 'voice',
+            status: status || 'completed',
+            duration: duration || 'Missed'
+          },
+          readBy: [{ userId, readAt: new Date() }]
+        })
+
+        const savedMessage = await messageDoc.save()
+
+        conversation.lastMessage = savedMessage._id
+        conversation.lastMessageTime = new Date()
+        await conversation.save()
+
+        io.to(userId).to(to).emit('receive_message', savedMessage)
+      } catch (err) {
+        console.error('Error logging call summary message:', err)
+      }
+    })
+
     socket.on('toggle_media', ({ to, isMuted, isCameraOff, isScreenSharing }) => {
       socket.to(to).emit('peer_media_toggled', {
         from: userId,
