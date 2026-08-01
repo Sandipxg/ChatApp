@@ -28,16 +28,12 @@ export const auth = betterAuth({
       maxAge: THIRTY_DAYS_IN_SECONDS
     }
   },
-  account: {
-    storeStateStrategy: "database",
-  },
   advanced: {
     useSecureCookies: isHttps,
     defaultCookieAttributes: {
       sameSite: isHttps ? "none" : "lax",
       secure: isHttps,
       maxAge: THIRTY_DAYS_IN_SECONDS,
-      partitioned: isHttps,
     },
   },
 
@@ -67,12 +63,11 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }
   },
-  trustedOrigins: [
+  trustedOrigins: Array.from(new Set([
     "http://localhost:5173",
     "http://localhost:4173",
     rawFrontendUrl,
-    process.env.FRONTEND_URL,
-    "https://*.vercel.app"
-  ].filter(Boolean)
+    process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : ''
+  ].filter(Boolean)))
 
 });
