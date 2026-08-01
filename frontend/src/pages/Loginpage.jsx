@@ -22,7 +22,10 @@ function LoginPage() {
     try {
       await authClient.signIn.social({
         provider: "google",
-        callbackURL: `${window.location.origin}/`
+        callbackURL: `${window.location.origin}/`,
+        authParams: {
+          prompt: "select_account"
+        }
       })
     } catch (err) {
       setAuthError(err.message || "Failed to log in with Google")
