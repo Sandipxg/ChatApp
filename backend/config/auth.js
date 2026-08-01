@@ -66,6 +66,8 @@ export const auth = betterAuth({
   trustedOrigins: Array.from(new Set([
     "http://localhost:5173",
     "http://localhost:4173",
+    "https://chat-app-gold-kappa-51.vercel.app",
+    "https://*.vercel.app",
     rawFrontendUrl,
     process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, '') : ''
   ].filter(Boolean)))
