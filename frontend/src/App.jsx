@@ -341,7 +341,10 @@ function AppLayout() {
             <button 
               onClick={() => {
                 if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                  navigator.serviceWorker.controller.postMessage({ type: 'TRIGGER_SYNC' })
+                  navigator.serviceWorker.controller.postMessage({ 
+                    type: 'TRIGGER_SYNC',
+                    apiUrl: import.meta.env.VITE_API_URL || ''
+                  })
                 }
               }}
               className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors cursor-pointer text-[10px] uppercase tracking-wider font-extrabold text-amber-700 dark:text-amber-300"

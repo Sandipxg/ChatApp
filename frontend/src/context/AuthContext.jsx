@@ -56,8 +56,8 @@ export function AuthProvider({ children }) {
           image: session.user.image || "",
         }
         persistUser(userData)
-      } else if (sessionError && (sessionError.status === 401 || sessionError.status === 403)) {
-        // Only wipe user session if server explicitly confirms 401/403 Unauthorized
+      } else if (!session || (sessionError && (sessionError.status === 401 || sessionError.status === 403))) {
+        // Wipe user session if server confirms no active session or 401/403 Unauthorized
         persistUser(null)
       }
       setLoading(false)

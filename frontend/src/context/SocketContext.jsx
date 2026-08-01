@@ -99,6 +99,11 @@ export function SocketProvider({ children }) {
       })
     })
 
+    newSocket.on('connect_error', (err) => {
+      console.warn('Socket connection error:', err?.message)
+      setIsSocketConnected(false)
+    })
+
     newSocket.on('disconnect', () => {
       setIsSocketConnected(false)
     })

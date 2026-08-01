@@ -219,7 +219,7 @@ function deleteOfflineAction(id) {
   })
 }
 
-async function replayOfflineActions() {
+async function replayOfflineActions(apiUrl) {
   console.log('[Service Worker] Replaying offline actions queue...')
   const actions = await getOfflineActions()
   if (!actions || actions.length === 0) {
@@ -232,7 +232,10 @@ async function replayOfflineActions() {
   for (const action of actions) {
     try {
       if (action.type === 'SEND_MESSAGE') {
-        const response = await fetch('/api/chat/messages', {
+        const baseUrl = action.payload?.apiUrl || apiUrl || ''
+        const targetUrl = baseUrl ? `${baseUrl.replace(/\/$/, '')}/api/chat/messages` : '/api/chat/messages'
+
+        const response = await fetch(targetUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -241,6 +244,15 @@ async function replayOfflineActions() {
           }),
           credentials: 'include'
         })
+
+        if (response.status === 401 || response.status === 403) {
+          console.warn('[Service Worker] Sync failed due to 401/403 Unauthorized session.')
+          const clientList = await self.clients.matchAll()
+          clientList.forEach((client) => {
+            client.postMessage({ type: 'UNAUTHORIZED_SYNC_FAIL' })
+          })
+          return
+        }
 
         if (!response.ok) {
           throw new Error(`Failed to replay SEND_MESSAGE action: ${response.statusText}`)
@@ -276,6 +288,6 @@ self.addEventListener('sync', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'TRIGGER_SYNC') {
     console.log('[Service Worker] Manual sync trigger received via client message')
-    event.waitUntil(replayOfflineActions())
+    event.waitUntil(replayOfflineActions(event.data.apiUrl))
   }
 })

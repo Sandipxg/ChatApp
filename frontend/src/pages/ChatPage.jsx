@@ -1054,7 +1054,10 @@ export default function ChatPage() {
   useEffect(() => {
     if (isSocketConnected) {
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: 'TRIGGER_SYNC' })
+        navigator.serviceWorker.controller.postMessage({ 
+          type: 'TRIGGER_SYNC',
+          apiUrl: import.meta.env.VITE_API_URL || ''
+        })
       }
     }
   }, [isSocketConnected])
