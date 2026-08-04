@@ -219,3 +219,144 @@ Socket.IO performs an initial HTTP handshake and upgrades the connection to a pe
 | **`useRef`** | Background Memory & DOM Refs | **NO** 🛑 | `typingTimeoutRef`, `pcRef` (WebRTC), `socketRef`, DOM nodes |
 | **`useEffect`** | Outside-World Synchronization | **N/A** (Runs *after* render) | WebSocket connecting, API fetching, Event listeners, Auto-scroll |
 
+---
+
+### Q13: React Stale Closure Bug — Why do incoming messages randomly disappear in `setMessages([...messages, msg])` inside a socket listener, and how do you fix it?
+
+**Scenario Code:**
+```js
+const [messages, setMessages] = useState([]);
+
+socket.on("newMessage", (msg) => {
+    setMessages([...messages, msg]);
+});
+```
+
+**Answer:**
+
+#### 1. Why the Bug Happens (Stale Closure):
+- When `socket.on("newMessage", ...)` is registered, the callback function creates a **closure** locking onto the `messages` state variable at that specific moment in time (which is `[]`).
+- When Message 1 (`"Hello"`) arrives, it runs `setMessages([...[], "Hello"])` $\rightarrow$ State becomes `["Hello"]`.
+- When Message 2 (`"World"`) arrives, the callback still references the stale closure where `messages = []`! It executes `setMessages([...[], "World"])`.
+- **Result:** `"World"` overwrites `"Hello"`, causing older messages to randomly disappear from the UI!
+
+---
+
+#### 2. How to Fix It:
+
+##### Solution A: Functional State Updater (Recommended ✅)
+Pass a callback function to `setMessages`:
+```js
+socket.on("newMessage", (msg) => {
+    // ✅ React guarantees `prevMessages` is always the latest state in memory
+    setMessages((prevMessages) => [...prevMessages, msg]);
+});
+```
+*Why this works:* React automatically passes the **guaranteed latest current state** (`prevMessages`) directly to the updater function at the exact millisecond the state update is queued, completely bypassing stale closures.
+
+##### Solution B: `useEffect` with Event Listener Cleanup 🧹
+If registering inside `useEffect`:
+```js
+useEffect(() => {
+    const handleNewMessage = (newMsg) => {
+        setMessages((prev) => [...prev, newMsg]);
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    // 🧹 Cleanup on unmount or socket change
+    return () => {
+        socket.off("newMessage", handleNewMessage);
+    };
+}, [socket]);
+```
+
+---
+
+### Q14: What is the difference between Authentication and Authorization? In your ChatApp, can any logged-in user delete another user's messages? If not, how does your backend prevent that?
+
+**Answer:**
+
+#### 1. Difference Between Authentication (AuthN) & Authorization (AuthZ):
+- **Authentication (Who are you?):** Verifies the identity of the user.  
+  *In ChatApp:* Handled by **Better Auth**. When a user logs in, Better Auth verifies credentials/OAuth and sets a secure HTTP-only session cookie containing their verified `userId`.
+- **Authorization (What are you allowed to do?):** Verifies whether an authenticated user has permission to perform a specific action on a specific resource.  
+  *In ChatApp:* Handled by backend custom logic in controllers & middleware. Checks whether `req.userId` is allowed to access, modify, or delete a target resource.
+
+---
+
+#### 2. Can any logged-in user delete another user's messages in ChatApp?
+**NO.** Simply being logged in (authenticated) does **not** grant permission to modify or delete anyone else's data.
+
+---
+
+#### 3. How the Backend Prevents Unauthorized Deletion (Codebase Implementation):
+
+In [chatController.js](file:///c:/Users/mrsan/Desktop/Boilerplate/backend/controllers/chatController.js#L638-L663), message deletion uses a 2-tier Defense-in-Depth Authorization strategy:
+
+##### A. Atomic Query Authorization (Database Level)
+The MongoDB update query enforces `senderId: userId` at the query level, ensuring a user cannot update a document they didn't create:
+```js
+const updatedMessage = await Message.findOneAndUpdate(
+  {
+    _id: messageId,
+    senderId: userId, // 🛡️ Authorization Check: Must be the original author!
+    isDeleted: false,
+    createdAt: { $gte: twentyFourHoursAgo } // Time rule: within 24 hours
+  },
+  { $set: { isDeleted: true, text: '', deletedAt: new Date() } },
+  { new: true }
+)
+```
+
+##### B. Explicit Ownership Verification & Error Handling (403 Forbidden)
+If the message exists but the requesting user is not the author, the backend explicitly throws a `403 Forbidden` error:
+```js
+if (message.senderId.toString() !== userId) {
+  throw new AppError('Unauthorized: You can only delete your own messages', 403)
+}
+```
+
+##### C. "Delete for Everyone" vs. "Delete for Me"
+- **Delete for Everyone:** Strictly authorized only for the original author (`senderId === userId`) within a 24-hour window.
+- **Delete for Me:** Adds `userId` to a `deletedBy` array on the message document, hiding it from the requester's timeline without deleting it for other chat participants.
+
+---
+
+### Q15: Behavioral & Debugging — Tell me about the most difficult bug you faced while building your ChatApp.
+
+**Answer (Using the STAR Method):**
+
+#### 1. Situation & Task:
+While building the 1-on-1 P2P video and voice calling feature in ChatApp using WebSockets for signaling and WebRTC for media transport, video calls would intermittently fail to connect—getting stuck on *"Connecting..."* with black video streams about 20% of the time on fast networks.
+
+#### 2. Root Cause Analysis (The Bug):
+Inspecting browser console logs on failing calls revealed an uncaught exception:
+`InvalidStateError: Failed to execute 'addIceCandidate' on 'RTCPeerConnection': The remote description is null.`
+
+- **Cause:** WebSockets are asynchronous and low-latency. Peer B’s browser was generating and emitting `ice_candidate` socket signals so quickly that they arrived at Peer A’s browser **a few milliseconds BEFORE Peer A’s browser had finished executing `pc.setRemoteDescription(answer)`**.
+- **Specification Constraint:** According to the WebRTC specification, calling `addIceCandidate()` before setting the remote SDP description throws an `InvalidStateError` and drops the candidate. Dropping critical network candidates caused P2P negotiation to fail.
+
+#### 3. Action (The Solution):
+Implemented an **ICE Candidate Buffering Queue (`iceCandidatesQueueRef`)** in `CallContext.jsx`:
+1. **Early Arrival Check:** When an `ice_candidate` socket event arrives, verify if `pcRef.current.remoteDescription` is set.
+2. **Queueing:** If `remoteDescription` is `null`, push the candidate into `iceCandidatesQueueRef.current` instead of calling `addIceCandidate()` immediately.
+3. **Queue Drainage:** Once `pc.setRemoteDescription(answer)` resolves successfully, drain the buffer queue and process all stored candidates:
+
+```js
+// 1. Set Remote SDP Description
+await pc.setRemoteDescription(new RTCSessionDescription(answer));
+
+// 2. ⚡ Drain buffered candidates that arrived early
+while (iceCandidatesQueueRef.current.length > 0) {
+  const candidate = iceCandidatesQueueRef.current.shift();
+  await pc.addIceCandidate(new RTCIceCandidate(candidate));
+}
+```
+
+#### 4. Result:
+Completely eliminated the `InvalidStateError` exception and raised video call connection success rates to 100%, regardless of network latency or out-of-order signaling arrival.
+
+
+
+
