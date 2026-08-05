@@ -564,4 +564,25 @@ if (tempIndex !== -1) {
 If the network request or Cloudinary upload fails:
 - Update `status: 'uploading'` to `status: 'error'` so a red *"Failed to send - Tap to retry"* button renders on the temporary bubble instead of duplicating or silently disappearing.
 
+---
+
+### Q21: If you had two more months to work on your ChatApp before releasing version 1.0, what are the top three architectural improvements you'd make, and why?
+
+**Answer:**
+
+#### 1. Full Production Signal Double Ratchet E2EE & Zero-Knowledge Backups
+- **Improvement:** Upgrade our existing encryption to a full **Signal Double Ratchet protocol** with per-message key rotation (Perfect Forward Secrecy) and Signal Sender Keys ($O(1)$ scaling) for group chats.
+- **Backups:** Implement E2EE cloud database backups encrypted with a master 256-bit Backup Key protected by a 64-digit key or an HSM Vault PIN (WhatsApp model).
+- **Why:** Guarantees that even if an active key is compromised in the future, past chat history remains 100% secure.
+
+#### 2. Migration to Zero-Knowledge Transient Relaying Architecture (WhatsApp Model)
+- **Improvement:** Transition the Node.js backend from permanent MongoDB message storage to a **transient message relay server**. Messages will be delivered to the client and deleted immediately from server RAM.
+- **Architectural Philosophy (Security vs. Convenience):** Platforms like Telegram, Discord, and Slack store messages permanently in cloud databases for seamless multi-device convenience. However, my personal engineering preference leans toward **Security and Privacy over Convenience**.
+- **Why:** Eliminates server storage overhead for billions of messages, removes subpoena/data breach risks, and guarantees that server infrastructure holds zero user payload data.
+
+#### 3. WebRTC SFU (Selective Forwarding Unit) Media Server for Multi-Party Video Calls
+- **Improvement:** Upgrade our 1-on-1 P2P WebRTC mesh calls to a dedicated **SFU media server** (e.g., LiveKit or Mediasoup).
+- **Why:** P2P mesh network connections scale at $O(N^2)$ bandwidth, bottlenecking client CPUs in group video calls with 4+ participants. An SFU routes media streams at $O(N)$ efficiency, allowing smooth group video calls with dozens of active video feeds.
+
+
 
